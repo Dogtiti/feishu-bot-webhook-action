@@ -11,6 +11,10 @@ inputs:
   signkey:
     description: 'set when you enable signature verify'
     required: false
+  comment_max_length:
+    description: 'max length of comment or review text shown in the card'
+    required: false
+    default: '160'
 outputs:
   code:
     description: 'code from response'

@@ -1,36 +1,150 @@
 import { Repository } from './trend'
 
-type NotificationCard = {
-  repo: string
-  eventType: string
-  themeColor: string
-  auser: string
-  avatar: string
-  status: string
-  etitle: string
-  detailurl: string
+type CardText = {
+  tag: 'plain_text' | 'lark_md'
+  content: string
 }
 
-type TrendingCard = {
-  object_list_1: Repository[]
-}
+type CardElement =
+  | {
+      tag: 'div'
+      text: CardText
+    }
+  | {
+      tag: 'note'
+      elements: Array<{
+        tag: 'plain_text'
+        content: string
+      }>
+    }
+  | {
+      tag: 'action'
+      actions: Array<{
+        tag: 'button'
+        text: {
+          tag: 'plain_text'
+          content: string
+        }
+        type: 'primary' | 'default'
+        url: string
+      }>
+    }
 
-type CardData = {
-  template_id: string
-  template_version_name: string
-  template_variable: NotificationCard | TrendingCard
-}
-
-type CardType = {
-  type: string
-  data: CardData
-}
-
-type CardMessage = {
+type RawCardMessage = {
   timestamp: string
   sign: string
-  msg_type: string
-  card: CardType
+  msg_type: 'interactive'
+  card: {
+    config: {
+      wide_screen_mode: boolean
+      enable_forward: boolean
+    }
+    header: {
+      template: string
+      title: {
+        tag: 'plain_text'
+        content: string
+      }
+    }
+    elements: CardElement[]
+  }
+}
+
+function buildBaseCard(
+  tm: number,
+  sign: string,
+  template: string,
+  title: string,
+  elements: CardElement[]
+): string {
+  const card: RawCardMessage = {
+    timestamp: `${tm}`,
+    sign,
+    msg_type: 'interactive',
+    card: {
+      config: {
+        wide_screen_mode: true,
+        enable_forward: true
+      },
+      header: {
+        template,
+        title: {
+          tag: 'plain_text',
+          content: title
+        }
+      },
+      elements
+    }
+  }
+
+  return JSON.stringify(card)
+}
+
+function buildNotificationElements(
+  eventType: string,
+  user: string,
+  status: string,
+  etitle: string,
+  detailurl: string
+): CardElement[] {
+  const elements: CardElement[] = [
+    {
+      tag: 'note',
+      elements: [
+        { tag: 'plain_text', content: `事件: ${eventType}` },
+        { tag: 'plain_text', content: `操作人: ${user}` },
+        { tag: 'plain_text', content: `状态: ${status}` }
+      ]
+    },
+    {
+      tag: 'div',
+      text: {
+        tag: 'plain_text',
+        content: etitle
+      }
+    }
+  ]
+
+  if (detailurl) {
+    elements.push({
+      tag: 'action',
+      actions: [
+        {
+          tag: 'button',
+          text: {
+            tag: 'plain_text',
+            content: '查看详情'
+          },
+          type: 'primary',
+          url: detailurl
+        }
+      ]
+    })
+  }
+
+  return elements
+}
+
+function buildTrendingMarkdown(repos: Repository[]): string {
+  if (repos.length === 0) {
+    return '今日暂无 GitHub Trending 数据'
+  }
+
+  return repos
+    .slice(0, 10)
+    .map((repo, index) => {
+      const summary = [
+        repo.language ? `语言: ${repo.language}` : '',
+        `Star: ${repo.stars}`,
+        `Fork: ${repo.forks}`,
+        `今日新增: ${repo.starsToday}`
+      ]
+        .filter(Boolean)
+        .join(' | ')
+
+      return `${index + 1}. [${repo.author}/${repo.name}](${repo.href})\n${summary}`
+    })
+    .join('\n\n')
 }
 
 export function BuildGithubNotificationCard(
@@ -44,29 +158,13 @@ export function BuildGithubNotificationCard(
   etitle: string,
   detailurl: string
 ): string {
-  const ncard: CardMessage = {
-    timestamp: `${tm}`,
+  return buildBaseCard(
+    tm,
     sign,
-    msg_type: 'interactive',
-    card: {
-      type: 'template',
-      data: {
-        template_id: 'AAqkeNyiypMLb',
-        template_version_name: '1.0.8',
-        template_variable: {
-          repo,
-          eventType,
-          themeColor: color,
-          auser: user,
-          avatar: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
-          status,
-          etitle,
-          detailurl
-        }
-      }
-    }
-  }
-  return JSON.stringify(ncard)
+    color,
+    `项目 ${repo} 有新的变化`,
+    buildNotificationElements(eventType, user, status, etitle, detailurl)
+  )
 }
 
 export function BuildGithubTrendingCard(
@@ -74,20 +172,13 @@ export function BuildGithubTrendingCard(
   sign: string,
   repos: Repository[]
 ): string {
-  const tcard: CardMessage = {
-    timestamp: `${tm}`,
-    sign,
-    msg_type: 'interactive',
-    card: {
-      type: 'template',
-      data: {
-        template_id: 'AAqkpVra76ijV',
-        template_version_name: '1.0.0',
-        template_variable: {
-          object_list_1: repos
-        }
+  return buildBaseCard(tm, sign, 'blue', 'GitHub Trending', [
+    {
+      tag: 'div',
+      text: {
+        tag: 'lark_md',
+        content: buildTrendingMarkdown(repos)
       }
     }
-  }
-  return JSON.stringify(tcard)
+  ])
 }

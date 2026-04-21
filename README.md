@@ -112,6 +112,9 @@ input variables.
   回调webhook
 - `signkey`: optional, the sign key for the bot when you enable the signature
   verification. 可选，自定义机器人的签名密钥，当启用签名校验时需要
+- `comment_max_length`: optional, max length of comment/review content shown in
+  the card, defaults to `160`. 可选，评论/Review 在卡片中显示的最大长度，默认
+  `160`
 
 Please configure `FEISHU_BOT_WEBHOOK` and `FEISHU_BOT_SIGNKEY` in the repo,
 `Setting` -> `Secrets and variables` -> `Actions` -> `New Repository secrets`
@@ -127,32 +130,24 @@ tredning到机器人。
 
 #### 建立自己的消息卡片
 
-you can fork the action and modify as below你可以fork项目并依据以下步骤修改
+The notification card is now built directly in code instead of relying on a
+remote Feishu CardKit template id. You can customize the layout in
+`src/card.ts`, and tune event text/summary behavior in `src/github2feishu.ts`.
 
-- Create a card here https://open.feishu.cn/cardkit
-- 在这里新建一个卡片
-- replace the card template id and varibales in the code
-- 替换代码中的卡片模版id和变量
+现在通知卡片已经改成在代码里直接生成，不再依赖飞书远端 CardKit 模版 id。你可以
+直接在 `src/card.ts` 里改卡片布局，在 `src/github2feishu.ts` 里改事件文案和摘要逻
+辑。
 
-```"card": {
-            "type": "template",
-            "data": {
-                "template_id": "AAqkeNyiypMLb",
-                "template_version_name": "1.0.6",
-                "template_variable": {
-                    "repo": "${repo}",
-                    "eventType": "${eventType}",
-                    "themeColor": "${color}",
-                    "auser": "${actor}",
-                    "avatar": "${avatar}",
-                    "status": "${status}",
-                    "etitle": "${etitle}",
-                    "detailurl": "${detailurl}"
-                }
-            }
-        }
-```
+This makes it easier to control:
 
-This card is for event notification, there is another for github trending. You
-can modify that as you wish. 这个卡片是做事件通知的，也有一个做github trending的
-卡片，你也可以安需要修改。
+- whether the actor is clickable
+- how much comment content is shown
+- which fields are displayed for PR / comment / review events
+
+这样后续你要控制：
+
+- 操作人是否可点击
+- 评论内容显示多少
+- PR / 评论 / Review 各自展示哪些字段
+
+都会更容易。
