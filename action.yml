@@ -15,6 +15,37 @@ inputs:
     description: 'max length of comment or review text shown in the card'
     required: false
     default: '160'
+  mode:
+    description: 'action mode: "event" (default) for GitHub event notifications, "release-changelog" for AI-generated release notes'
+    required: false
+    default: 'event'
+  ai_api_key:
+    description: 'API key for the AI model (required for release-changelog mode)'
+    required: false
+  ai_model:
+    description: 'AI model name (default: deepseek-chat). Examples: deepseek-chat, claude-sonnet-4-20250514'
+    required: false
+    default: 'deepseek-chat'
+  ai_base_url:
+    description: 'OpenAI-compatible API base URL (default: https://api.deepseek.com/v1). Any provider with /chat/completions endpoint works.'
+    required: false
+    default: 'https://api.deepseek.com/v1'
+  service_name:
+    description: 'service name shown in the release card (e.g. viceme-engine)'
+    required: false
+  commits:
+    description: 'git commit log text to summarize (for release-changelog mode)'
+    required: false
+  commit_count:
+    description: 'number of commits in this release'
+    required: false
+    default: '0'
+  compare_url:
+    description: 'GitHub compare URL for the release diff'
+    required: false
+  tag_name:
+    description: 'release tag/branch name'
+    required: false
 outputs:
   code:
     description: 'code from response'
