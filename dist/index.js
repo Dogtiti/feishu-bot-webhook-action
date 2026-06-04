@@ -43823,6 +43823,128 @@ function BuildGithubTrendingCard(tm, sign, repos) {
 
 /***/ }),
 
+/***/ 8598:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.generateChangelog = generateChangelog;
+const https = __importStar(__nccwpck_require__(5687));
+const SYSTEM_PROMPT = `你是一个专业的产品发版通知撰写者。你的任务是根据 Git commit 记录，生成一份面向产品经理和测试人员的中文发版通知。
+
+要求：
+1. 用简洁的中文描述每个功能变更，不要使用技术术语
+2. 按「✨ 新功能」「⚡ 改进优化」「🐛 问题修复」三个分类整理
+3. 每条更新用一句话概括，让非技术人员能看懂
+4. 如果某个分类没有内容，就不要列出该分类
+5. 忽略纯技术重构、依赖更新、CI 配置等对用户无感知的变更
+6. 如果所有 commit 都是无感知变更，就输出「本次更新为内部技术优化，无面向用户的功能变化」
+
+输出格式严格遵循飞书 lark_md 语法，示例：
+**✨ 新功能**
+- 新增了 XXX 功能
+- 支持了 YYY
+
+**🐛 问题修复**
+- 修复了 ZZZ 的问题
+
+注意：不要输出任何分隔线、标题前缀（如 ###）、或额外的开头结尾语句，直接输出分类内容即可。`;
+function buildUserPrompt(commits, serviceName) {
+    return `以下是 ${serviceName} 服务最近的 Git commit 记录，请生成发版通知：
+
+${commits}`;
+}
+function parseBaseUrl(baseUrl) {
+    const url = new URL(baseUrl);
+    return {
+        hostname: url.hostname,
+        basePath: url.pathname.replace(/\/$/, ''),
+        port: url.port ? parseInt(url.port, 10) : (url.protocol === 'https:' ? 443 : 80),
+        protocol: url.protocol
+    };
+}
+async function generateChangelog(config) {
+    const messages = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: buildUserPrompt(config.commits, config.serviceName) }
+    ];
+    const body = JSON.stringify({
+        model: config.model,
+        messages,
+        temperature: 0.3,
+        max_tokens: 1024
+    });
+    const { hostname, basePath, port, protocol } = parseBaseUrl(config.baseUrl);
+    const path = `${basePath}/chat/completions`;
+    const httpModule = protocol === 'https:' ? https : await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 3685, 23));
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname,
+            port,
+            path,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.apiKey}`
+            }
+        };
+        const req = httpModule.request(options, res => {
+            let data = '';
+            res.on('data', chunk => {
+                data += chunk.toString();
+            });
+            res.on('end', () => {
+                try {
+                    const json = JSON.parse(data);
+                    const content = json.choices?.[0]?.message?.content;
+                    if (!content) {
+                        console.error('AI response:', data);
+                        reject(new Error('AI 返回内容为空'));
+                        return;
+                    }
+                    resolve(content.trim());
+                }
+                catch (err) {
+                    console.error('AI response parse error:', data);
+                    reject(new Error(`解析 AI 响应失败: ${err}`));
+                }
+            });
+        });
+        req.on('error', e => {
+            reject(new Error(`AI API 请求失败: ${e.message}`));
+        });
+        req.write(body);
+        req.end();
+    });
+}
+
+
+/***/ }),
+
 /***/ 3026:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -44133,6 +44255,254 @@ async function PostGithubEvent() {
     const notification = BuildNotificationContent(payload, eventName, commentMaxLength);
     const cardmsg = (0, card_1.BuildGithubNotificationCard)(tm, sign, repo, notification.eventType, 'blue', actor, notification.status, notification.etitle, notification.detailurl);
     return (0, feishu_1.PostToFeishu)(webhookId, cardmsg);
+}
+
+
+/***/ }),
+
+/***/ 6144:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core = __importStar(__nccwpck_require__(2186));
+const github2feishu_1 = __nccwpck_require__(3221);
+const release_changelog_1 = __nccwpck_require__(6799);
+async function run() {
+    const mode = core.getInput('mode') || 'event';
+    if (mode === 'release-changelog') {
+        await (0, release_changelog_1.PostReleaseChangelog)();
+    }
+    else {
+        await (0, github2feishu_1.PostGithubEvent)();
+    }
+}
+run();
+
+
+/***/ }),
+
+/***/ 802:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BuildReleaseChangelogCard = BuildReleaseChangelogCard;
+function BuildReleaseChangelogCard(params) {
+    const { timestamp, sign, serviceName, tagName, changelog, compareUrl, commitCount } = params;
+    const elements = [
+        {
+            tag: 'column_set',
+            flex_mode: 'bisect',
+            background_style: 'grey',
+            columns: [
+                {
+                    tag: 'column',
+                    width: 'weighted',
+                    weight: 1,
+                    vertical_align: 'top',
+                    elements: [
+                        {
+                            tag: 'div',
+                            text: { tag: 'lark_md', content: `**服务**\n${serviceName}` }
+                        }
+                    ]
+                },
+                {
+                    tag: 'column',
+                    width: 'weighted',
+                    weight: 1,
+                    vertical_align: 'top',
+                    elements: [
+                        {
+                            tag: 'div',
+                            text: { tag: 'lark_md', content: `**版本**\n${tagName}` }
+                        }
+                    ]
+                },
+                {
+                    tag: 'column',
+                    width: 'weighted',
+                    weight: 1,
+                    vertical_align: 'top',
+                    elements: [
+                        {
+                            tag: 'div',
+                            text: { tag: 'lark_md', content: `**提交数**\n${commitCount}` }
+                        }
+                    ]
+                }
+            ]
+        },
+        { tag: 'hr' },
+        {
+            tag: 'div',
+            text: {
+                tag: 'lark_md',
+                content: changelog
+            }
+        }
+    ];
+    if (compareUrl) {
+        elements.push({ tag: 'hr' });
+        elements.push({
+            tag: 'action',
+            actions: [
+                {
+                    tag: 'button',
+                    text: { tag: 'plain_text', content: '查看完整变更' },
+                    type: 'primary',
+                    url: compareUrl
+                }
+            ]
+        });
+    }
+    elements.push({
+        tag: 'note',
+        elements: [
+            {
+                tag: 'plain_text',
+                content: '由 AI 自动生成 · 基于 Git commit 记录总结'
+            }
+        ]
+    });
+    const card = {
+        timestamp: `${timestamp}`,
+        sign,
+        msg_type: 'interactive',
+        card: {
+            config: {
+                wide_screen_mode: true,
+                enable_forward: true
+            },
+            header: {
+                template: 'green',
+                title: {
+                    tag: 'plain_text',
+                    content: `🚀 ${serviceName} ${tagName} 已发布`
+                }
+            },
+            elements
+        }
+    };
+    return JSON.stringify(card);
+}
+
+
+/***/ }),
+
+/***/ 6799:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PostReleaseChangelog = PostReleaseChangelog;
+const core = __importStar(__nccwpck_require__(2186));
+const github_1 = __nccwpck_require__(5438);
+const feishu_1 = __nccwpck_require__(3026);
+const changelog_1 = __nccwpck_require__(8598);
+const release_card_1 = __nccwpck_require__(802);
+const DEFAULT_MODEL = 'deepseek-chat';
+const DEFAULT_BASE_URL = 'https://api.deepseek.com/v1';
+async function PostReleaseChangelog() {
+    const webhook = core.getInput('webhook') || process.env.FEISHU_BOT_WEBHOOK || '';
+    const signKey = core.getInput('signkey') || process.env.FEISHU_BOT_SIGNKEY || '';
+    const aiApiKey = core.getInput('ai_api_key') || process.env.AI_API_KEY || '';
+    const aiModel = core.getInput('ai_model') || process.env.AI_MODEL || DEFAULT_MODEL;
+    const aiBaseUrl = core.getInput('ai_base_url') || process.env.AI_BASE_URL || DEFAULT_BASE_URL;
+    const serviceName = core.getInput('service_name') || process.env.SERVICE_NAME || '';
+    const commits = core.getInput('commits') || '';
+    const commitCount = parseInt(core.getInput('commit_count') || '0', 10);
+    const compareUrl = core.getInput('compare_url') || '';
+    const tagName = core.getInput('tag_name') || '';
+    if (!webhook) {
+        core.setFailed('webhook is required');
+        return undefined;
+    }
+    if (!aiApiKey) {
+        core.setFailed('ai_api_key is required for release-changelog mode');
+        return undefined;
+    }
+    if (!commits) {
+        core.setFailed('commits is required for release-changelog mode');
+        return undefined;
+    }
+    const actor = github_1.context.actor || 'unknown';
+    console.log(`Generating changelog for ${serviceName} (${tagName})...`);
+    console.log(`Using model: ${aiModel} via ${aiBaseUrl}`);
+    console.log(`Commits:\n${commits}`);
+    const changelog = await (0, changelog_1.generateChangelog)({
+        apiKey: aiApiKey,
+        model: aiModel,
+        baseUrl: aiBaseUrl,
+        serviceName,
+        commits,
+        compareUrl
+    });
+    console.log(`Generated changelog:\n${changelog}`);
+    const webhookId = webhook.slice(webhook.indexOf('hook/') + 5);
+    const tm = Math.floor(Date.now() / 1000);
+    const sign = (0, feishu_1.sign_with_timestamp)(tm, signKey);
+    const cardMsg = (0, release_card_1.BuildReleaseChangelogCard)({
+        timestamp: tm,
+        sign,
+        serviceName,
+        tagName,
+        changelog,
+        compareUrl,
+        commitCount,
+        actor
+    });
+    return (0, feishu_1.PostToFeishu)(webhookId, cardMsg);
 }
 
 
@@ -59349,24 +59719,76 @@ module.exports = JSON.parse('{"application/1d-interleaved-parityfec":{"source":"
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/create fake namespace object */
+/******/ 	(() => {
+/******/ 		var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
+/******/ 		var leafPrototypes;
+/******/ 		// create a fake namespace object
+/******/ 		// mode & 1: value is a module id, require it
+/******/ 		// mode & 2: merge all properties of value into the ns
+/******/ 		// mode & 4: return value when already ns object
+/******/ 		// mode & 16: return value when it's Promise-like
+/******/ 		// mode & 8|1: behave like require
+/******/ 		__nccwpck_require__.t = function(value, mode) {
+/******/ 			if(mode & 1) value = this(value);
+/******/ 			if(mode & 8) return value;
+/******/ 			if(typeof value === 'object' && value) {
+/******/ 				if((mode & 4) && value.__esModule) return value;
+/******/ 				if((mode & 16) && typeof value.then === 'function') return value;
+/******/ 			}
+/******/ 			var ns = Object.create(null);
+/******/ 			__nccwpck_require__.r(ns);
+/******/ 			var def = {};
+/******/ 			leafPrototypes = leafPrototypes || [null, getProto({}), getProto([]), getProto(getProto)];
+/******/ 			for(var current = mode & 2 && value; typeof current == 'object' && !~leafPrototypes.indexOf(current); current = getProto(current)) {
+/******/ 				Object.getOwnPropertyNames(current).forEach((key) => (def[key] = () => (value[key])));
+/******/ 			}
+/******/ 			def['default'] = () => (value);
+/******/ 			__nccwpck_require__.d(ns, def);
+/******/ 			return ns;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__nccwpck_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__nccwpck_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be in strict mode.
-(() => {
-"use strict";
-var exports = __webpack_exports__;
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const github2feishu_1 = __nccwpck_require__(3221);
-(0, github2feishu_1.PostGithubEvent)();
-
-})();
-
-module.exports = __webpack_exports__;
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __nccwpck_require__(6144);
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
 /******/ })()
 ;
 //# sourceMappingURL=index.js.map
