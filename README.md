@@ -115,6 +115,19 @@ input variables.
 - `comment_max_length`: optional, max length of comment/review content shown in
   the card, defaults to `160`. 可选，评论/Review 在卡片中显示的最大长度，默认
   `160`
+- `mode`: optional, action mode. Use `event` for GitHub event notifications,
+  `release-changelog` for release notes, or `pr-reminder` for stale PR
+  reminders. 可选，消息模式。
+- `stale_prs`: optional, JSON array of stale pull requests for `pr-reminder`
+  mode. 可选，`pr-reminder` 模式下待提醒 PR 的 JSON 数组。
+- `threshold_days`: optional, minimum open days for `pr-reminder` mode, defaults
+  to `3`. 可选，PR 打开超过多少天后提醒，默认 `3`。
+- `repository_name`: optional, repository name shown in `pr-reminder` mode. 可
+  选，PR 提醒卡片里展示的仓库名。
+- `report_url`: optional, workflow run or report URL shown in `pr-reminder`
+  mode. 可选，PR 提醒卡片里的检查详情链接。
+- `max_items`: optional, maximum PRs shown in `pr-reminder` mode, defaults to
+  `20`. 可选，PR 提醒卡片里最多展示多少条，默认 `20`。
 
 Please configure `FEISHU_BOT_WEBHOOK` and `FEISHU_BOT_SIGNKEY` in the repo,
 `Setting` -> `Secrets and variables` -> `Actions` -> `New Repository secrets`
@@ -126,6 +139,31 @@ In the sample above `schedule` event will post github trending to bot every day
 at 2:30 UTC time. 上面例子中配置的`schedule` 事件会在每天UTC时间2:30发送github
 tredning到机器人。
 
+#### Pull request reminder
+
+#### PR 超时提醒
+
+Use `mode: pr-reminder` when another workflow step has collected open pull
+requests that have stayed open longer than your threshold.
+
+当你的 workflow 里已经收集到超过阈值仍未合并的 open PR 时，可以使用
+`mode: pr-reminder` 发送提醒卡片。
+
+```yaml
+- name: Send stale PR reminder
+  uses: Dogtiti/feishu-bot-webhook-action@main
+  with:
+    webhook: ${{ secrets.FEISHU_BOT_WEBHOOK }}
+    signkey: ${{ secrets.FEISHU_BOT_SIGNKEY }}
+    mode: pr-reminder
+    repository_name: ${{ github.repository }}
+    threshold_days: '3'
+    stale_prs: ${{ steps.stale-prs.outputs.stale_prs }}
+    report_url: >-
+      ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+      github.run_id }}
+```
+
 #### For those who want to build your own card
 
 #### 建立自己的消息卡片
@@ -134,8 +172,8 @@ The notification card is now built directly in code instead of relying on a
 remote Feishu CardKit template id. You can customize the layout in
 `src/card.ts`, and tune event text/summary behavior in `src/github2feishu.ts`.
 
-现在通知卡片已经改成在代码里直接生成，不再依赖飞书远端 CardKit 模版 id。你可以
-直接在 `src/card.ts` 里改卡片布局，在 `src/github2feishu.ts` 里改事件文案和摘要逻
+现在通知卡片已经改成在代码里直接生成，不再依赖飞书远端 CardKit 模版 id。你可以直
+接在 `src/card.ts` 里改卡片布局，在 `src/github2feishu.ts` 里改事件文案和摘要逻
 辑。
 
 This makes it easier to control:

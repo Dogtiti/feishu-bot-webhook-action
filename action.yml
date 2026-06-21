@@ -16,18 +16,26 @@ inputs:
     required: false
     default: '160'
   mode:
-    description: 'action mode: "event" (default) for GitHub event notifications, "release-changelog" for AI-generated release notes'
+    description:
+      'action mode: "event" (default) for GitHub event notifications,
+      "release-changelog" for AI-generated release notes, "pr-reminder" for
+      stale PR reminders'
     required: false
     default: 'event'
   ai_api_key:
-    description: 'API key for the AI model (required for release-changelog mode)'
+    description:
+      'API key for the AI model (required for release-changelog mode)'
     required: false
   ai_model:
-    description: 'AI model name (default: deepseek-chat). Examples: deepseek-chat, claude-sonnet-4-20250514'
+    description:
+      'AI model name (default: deepseek-chat). Examples: deepseek-chat,
+      claude-sonnet-4-20250514'
     required: false
     default: 'deepseek-chat'
   ai_base_url:
-    description: 'OpenAI-compatible API base URL (default: https://api.deepseek.com/v1). Any provider with /chat/completions endpoint works.'
+    description:
+      'OpenAI-compatible API base URL (default: https://api.deepseek.com/v1).
+      Any provider with /chat/completions endpoint works.'
     required: false
     default: 'https://api.deepseek.com/v1'
   service_name:
@@ -46,6 +54,23 @@ inputs:
   tag_name:
     description: 'release tag/branch name'
     required: false
+  stale_prs:
+    description: 'JSON array of stale pull requests for pr-reminder mode'
+    required: false
+  threshold_days:
+    description: 'minimum open days for pr-reminder mode'
+    required: false
+    default: '3'
+  repository_name:
+    description: 'repository name shown in pr-reminder mode'
+    required: false
+  report_url:
+    description: 'optional workflow run or report URL shown in pr-reminder mode'
+    required: false
+  max_items:
+    description: 'maximum pull requests shown in pr-reminder mode'
+    required: false
+    default: '20'
 outputs:
   code:
     description: 'code from response'
