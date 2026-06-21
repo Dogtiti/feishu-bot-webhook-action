@@ -91,6 +91,13 @@ function oneLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
 }
 
+function formatProjectName(repositoryName: string): string {
+  const normalized = oneLine(repositoryName)
+  return (
+    normalized.split('/').filter(Boolean).pop() || normalized || 'repository'
+  )
+}
+
 function getAuthor(pr: StalePullRequest): string {
   return oneLine(pr.author) || 'unknown'
 }
@@ -165,6 +172,7 @@ export function BuildPullRequestReminderCard(
     maxItems,
     reportUrl
   } = params
+  const projectName = formatProjectName(repositoryName)
 
   const elements: CardElement[] = [
     {
@@ -180,7 +188,7 @@ export function BuildPullRequestReminderCard(
           elements: [
             {
               tag: 'div',
-              text: { tag: 'lark_md', content: `**仓库**\n${repositoryName}` }
+              text: { tag: 'lark_md', content: `**项目**\n${projectName}` }
             }
           ]
         },
@@ -261,7 +269,7 @@ export function BuildPullRequestReminderCard(
         template: 'orange',
         title: {
           tag: 'plain_text',
-          content: `${repositoryName} 有 ${pullRequests.length} 个 PR 已超过 ${thresholdDays} 天未合并`
+          content: `项目 ${projectName} 有 ${pullRequests.length} 个 PR 已超过 ${thresholdDays} 天未合并`
         }
       },
       elements

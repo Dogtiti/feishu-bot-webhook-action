@@ -70,7 +70,7 @@ inputs:
   max_items:
     description: 'maximum pull requests shown in pr-reminder mode'
     required: false
-    default: '20'
+    default: '50'
 outputs:
   code:
     description: 'code from response'

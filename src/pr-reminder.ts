@@ -58,7 +58,7 @@ export async function PostPullRequestReminder(): Promise<number | undefined> {
     process.env.GITHUB_REPOSITORY ||
     'repository'
   const thresholdDays = parseNumberInput('threshold_days', 3)
-  const maxItems = parseNumberInput('max_items', 20)
+  const maxItems = parseNumberInput('max_items', 50)
   const reportUrl = core.getInput('report_url') || ''
 
   if (!webhook) {
