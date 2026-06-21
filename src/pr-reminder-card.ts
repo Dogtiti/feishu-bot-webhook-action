@@ -269,7 +269,7 @@ export function BuildPullRequestReminderCard(
         template: 'orange',
         title: {
           tag: 'plain_text',
-          content: `${projectName} 有 ${pullRequests.length} 个 PR 已超过 ${thresholdDays} 天未合并`
+          content: `项目 ${projectName} 有 ${pullRequests.length} 个 PR 已超过 ${thresholdDays} 天未合并`
         }
       },
       elements

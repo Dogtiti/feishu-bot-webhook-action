@@ -28,6 +28,10 @@ describe('pull request reminder card', () => {
     expect(card.card.header.template).toBe('orange')
     expect(card.card.header.title.content).toContain('Viceme-Web')
     expect(card.card.header.title.content).toContain('1 个 PR')
+    expect(card.card.header.title.content).toContain('项目 Viceme-Web')
+    expect(card.card.header.title.content).not.toContain(
+      'Leizhenpeng/Viceme-Web'
+    )
 
     const summary = card.card.elements[0]
     expect(summary.tag).toBe('column_set')
