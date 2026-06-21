@@ -44320,6 +44320,10 @@ exports.BuildPullRequestReminderCard = BuildPullRequestReminderCard;
 function oneLine(value) {
     return value.replace(/\s+/g, ' ').trim();
 }
+function formatProjectName(repositoryName) {
+    const normalized = oneLine(repositoryName);
+    return (normalized.split('/').filter(Boolean).pop() || normalized || 'repository');
+}
 function getAuthor(pr) {
     return oneLine(pr.author) || 'unknown';
 }
@@ -44365,6 +44369,7 @@ function formatPullRequests(pullRequests, maxItems) {
 }
 function BuildPullRequestReminderCard(params) {
     const { timestamp, sign, repositoryName, thresholdDays, pullRequests, maxItems, reportUrl } = params;
+    const projectName = formatProjectName(repositoryName);
     const elements = [
         {
             tag: 'column_set',
@@ -44379,7 +44384,7 @@ function BuildPullRequestReminderCard(params) {
                     elements: [
                         {
                             tag: 'div',
-                            text: { tag: 'lark_md', content: `**仓库**\n${repositoryName}` }
+                            text: { tag: 'lark_md', content: `**项目**\n${projectName}` }
                         }
                     ]
                 },
@@ -44457,7 +44462,7 @@ function BuildPullRequestReminderCard(params) {
                 template: 'orange',
                 title: {
                     tag: 'plain_text',
-                    content: `${repositoryName} 有 ${pullRequests.length} 个 PR 已超过 ${thresholdDays} 天未合并`
+                    content: `${projectName} 有 ${pullRequests.length} 个 PR 已超过 ${thresholdDays} 天未合并`
                 }
             },
             elements
@@ -44545,7 +44550,7 @@ async function PostPullRequestReminder() {
         process.env.GITHUB_REPOSITORY ||
         'repository';
     const thresholdDays = parseNumberInput('threshold_days', 3);
-    const maxItems = parseNumberInput('max_items', 20);
+    const maxItems = parseNumberInput('max_items', 50);
     const reportUrl = core.getInput('report_url') || '';
     if (!webhook) {
         core.setFailed('webhook is required');

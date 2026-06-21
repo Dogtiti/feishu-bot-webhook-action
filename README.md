@@ -127,7 +127,7 @@ input variables.
 - `report_url`: optional, workflow run or report URL shown in `pr-reminder`
   mode. 可选，PR 提醒卡片里的检查详情链接。
 - `max_items`: optional, maximum PRs shown in `pr-reminder` mode, defaults to
-  `20`. 可选，PR 提醒卡片里最多展示多少条，默认 `20`。
+  `50`. 可选，PR 提醒卡片里最多展示多少条，默认 `50`。
 
 Please configure `FEISHU_BOT_WEBHOOK` and `FEISHU_BOT_SIGNKEY` in the repo,
 `Setting` -> `Secrets and variables` -> `Actions` -> `New Repository secrets`

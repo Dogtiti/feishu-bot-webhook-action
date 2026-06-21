@@ -6,7 +6,7 @@ describe('pull request reminder card', () => {
       BuildPullRequestReminderCard({
         timestamp: 1716283459,
         sign: 'test-sign',
-        repositoryName: 'Viceme-Web',
+        repositoryName: 'Leizhenpeng/Viceme-Web',
         thresholdDays: 3,
         maxItems: 20,
         reportUrl: 'https://github.com/Leizhenpeng/Viceme-Web/actions/runs/1',
@@ -31,6 +31,11 @@ describe('pull request reminder card', () => {
 
     const summary = card.card.elements[0]
     expect(summary.tag).toBe('column_set')
+    expect(summary.columns[0].elements[0].text.content).toContain('**项目**')
+    expect(summary.columns[0].elements[0].text.content).toContain('Viceme-Web')
+    expect(summary.columns[0].elements[0].text.content).not.toContain(
+      'Leizhenpeng/Viceme-Web'
+    )
 
     const prList = card.card.elements.find(
       (e: any) => e.tag === 'div' && e.text?.content?.includes('#1042')
