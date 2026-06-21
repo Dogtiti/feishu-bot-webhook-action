@@ -100,4 +100,5 @@ __tests__/runner/*
 .idea
 .vscode
 *.code-workspace
+.codegraph/
 node_modules

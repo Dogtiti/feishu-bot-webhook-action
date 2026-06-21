@@ -44320,19 +44320,46 @@ exports.BuildPullRequestReminderCard = BuildPullRequestReminderCard;
 function oneLine(value) {
     return value.replace(/\s+/g, ' ').trim();
 }
+function getAuthor(pr) {
+    return oneLine(pr.author) || 'unknown';
+}
+function countAuthors(pullRequests) {
+    return new Set(pullRequests.map(getAuthor)).size;
+}
+function groupByAuthor(pullRequests) {
+    const groups = new Map();
+    for (const pr of pullRequests) {
+        const author = getAuthor(pr);
+        groups.set(author, [...(groups.get(author) || []), pr]);
+    }
+    return [...groups.entries()]
+        .map(([author, prs]) => ({ author, pullRequests: prs }))
+        .sort((left, right) => {
+        const countDiff = right.pullRequests.length - left.pullRequests.length;
+        if (countDiff !== 0) {
+            return countDiff;
+        }
+        const ageDiff = right.pullRequests[0].ageDays - left.pullRequests[0].ageDays;
+        if (ageDiff !== 0) {
+            return ageDiff;
+        }
+        return left.author.localeCompare(right.author);
+    });
+}
+function formatPullRequestLine(pr) {
+    const base = pr.baseRef ? ` · 合入: ${oneLine(pr.baseRef)}` : '';
+    const draft = pr.draft ? ' · Draft' : '';
+    return `- ${pr.ageDays} 天 · [#${pr.number} ${oneLine(pr.title)}](${pr.url})${base}${draft}`;
+}
 function formatPullRequests(pullRequests, maxItems) {
     const visible = pullRequests.slice(0, maxItems);
-    const lines = visible.map(pr => {
-        const base = pr.baseRef ? ` → ${pr.baseRef}` : '';
-        const draft = pr.draft ? ' · Draft' : '';
-        return [
-            `${pr.ageDays} 天 · [#${pr.number} ${oneLine(pr.title)}](${pr.url})`,
-            `作者: ${pr.author || 'unknown'}${base}${draft}`
-        ].join('\n');
-    });
+    const lines = groupByAuthor(visible).map(group => [
+        `**@${group.author}** · ${group.pullRequests.length} 个 PR`,
+        ...group.pullRequests.map(formatPullRequestLine)
+    ].join('\n'));
     const hidden = pullRequests.length - visible.length;
     if (hidden > 0) {
-        lines.push(`还有 ${hidden} 个 PR 未展示,请打开 GitHub 查看完整列表。`);
+        lines.push(`还有 ${hidden} 个 PR 未展示, 请打开 GitHub 查看完整列表。`);
     }
     return lines.join('\n\n');
 }
@@ -44378,7 +44405,7 @@ function BuildPullRequestReminderCard(params) {
                             tag: 'div',
                             text: {
                                 tag: 'lark_md',
-                                content: `**待处理**\n${pullRequests.length} 个 PR`
+                                content: `**待处理**\n${pullRequests.length} 个 PR / ${countAuthors(pullRequests)} 人`
                             }
                         }
                     ]
