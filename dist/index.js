@@ -44292,16 +44292,264 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github2feishu_1 = __nccwpck_require__(3221);
 const release_changelog_1 = __nccwpck_require__(6799);
+const pr_reminder_1 = __nccwpck_require__(9460);
 async function run() {
     const mode = core.getInput('mode') || 'event';
     if (mode === 'release-changelog') {
         await (0, release_changelog_1.PostReleaseChangelog)();
+    }
+    else if (mode === 'pr-reminder' || mode === 'stale-pr-reminder') {
+        await (0, pr_reminder_1.PostPullRequestReminder)();
     }
     else {
         await (0, github2feishu_1.PostGithubEvent)();
     }
 }
 run();
+
+
+/***/ }),
+
+/***/ 5494:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BuildPullRequestReminderCard = BuildPullRequestReminderCard;
+function oneLine(value) {
+    return value.replace(/\s+/g, ' ').trim();
+}
+function formatPullRequests(pullRequests, maxItems) {
+    const visible = pullRequests.slice(0, maxItems);
+    const lines = visible.map(pr => {
+        const base = pr.baseRef ? ` → ${pr.baseRef}` : '';
+        const draft = pr.draft ? ' · Draft' : '';
+        return [
+            `${pr.ageDays} 天 · [#${pr.number} ${oneLine(pr.title)}](${pr.url})`,
+            `作者: ${pr.author || 'unknown'}${base}${draft}`
+        ].join('\n');
+    });
+    const hidden = pullRequests.length - visible.length;
+    if (hidden > 0) {
+        lines.push(`还有 ${hidden} 个 PR 未展示,请打开 GitHub 查看完整列表。`);
+    }
+    return lines.join('\n\n');
+}
+function BuildPullRequestReminderCard(params) {
+    const { timestamp, sign, repositoryName, thresholdDays, pullRequests, maxItems, reportUrl } = params;
+    const elements = [
+        {
+            tag: 'column_set',
+            flex_mode: 'bisect',
+            background_style: 'grey',
+            columns: [
+                {
+                    tag: 'column',
+                    width: 'weighted',
+                    weight: 1,
+                    vertical_align: 'top',
+                    elements: [
+                        {
+                            tag: 'div',
+                            text: { tag: 'lark_md', content: `**仓库**\n${repositoryName}` }
+                        }
+                    ]
+                },
+                {
+                    tag: 'column',
+                    width: 'weighted',
+                    weight: 1,
+                    vertical_align: 'top',
+                    elements: [
+                        {
+                            tag: 'div',
+                            text: { tag: 'lark_md', content: `**阈值**\n${thresholdDays} 天` }
+                        }
+                    ]
+                },
+                {
+                    tag: 'column',
+                    width: 'weighted',
+                    weight: 1,
+                    vertical_align: 'top',
+                    elements: [
+                        {
+                            tag: 'div',
+                            text: {
+                                tag: 'lark_md',
+                                content: `**待处理**\n${pullRequests.length} 个 PR`
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        { tag: 'hr' },
+        {
+            tag: 'div',
+            text: {
+                tag: 'lark_md',
+                content: formatPullRequests(pullRequests, maxItems)
+            }
+        }
+    ];
+    if (reportUrl) {
+        elements.push({ tag: 'hr' });
+        elements.push({
+            tag: 'action',
+            actions: [
+                {
+                    tag: 'button',
+                    text: { tag: 'plain_text', content: '查看本次检查' },
+                    type: 'primary',
+                    url: reportUrl
+                }
+            ]
+        });
+    }
+    elements.push({
+        tag: 'note',
+        elements: [
+            {
+                tag: 'plain_text',
+                content: '由 GitHub Actions 定时检查 open PR 生成'
+            }
+        ]
+    });
+    const card = {
+        timestamp: `${timestamp}`,
+        sign,
+        msg_type: 'interactive',
+        card: {
+            config: {
+                wide_screen_mode: true,
+                enable_forward: true
+            },
+            header: {
+                template: 'orange',
+                title: {
+                    tag: 'plain_text',
+                    content: `${repositoryName} 有 ${pullRequests.length} 个 PR 已超过 ${thresholdDays} 天未合并`
+                }
+            },
+            elements
+        }
+    };
+    return JSON.stringify(card);
+}
+
+
+/***/ }),
+
+/***/ 9460:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PostPullRequestReminder = PostPullRequestReminder;
+const core = __importStar(__nccwpck_require__(2186));
+const feishu_1 = __nccwpck_require__(3026);
+const pr_reminder_card_1 = __nccwpck_require__(5494);
+function parseNumberInput(name, fallback) {
+    const value = parseInt(core.getInput(name) || `${fallback}`, 10);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+function parsePullRequests(input) {
+    if (!input.trim()) {
+        return [];
+    }
+    const value = JSON.parse(input);
+    if (!Array.isArray(value)) {
+        throw new Error('stale_prs must be a JSON array');
+    }
+    return value.map((item, index) => {
+        if (typeof item !== 'object' || item === null) {
+            throw new Error(`stale_prs[${index}] must be an object`);
+        }
+        const pr = item;
+        const number = Number(pr.number);
+        const ageDays = Number(pr.ageDays);
+        if (!Number.isFinite(number) || !Number.isFinite(ageDays)) {
+            throw new Error(`stale_prs[${index}] must include number and ageDays`);
+        }
+        return {
+            number,
+            ageDays,
+            title: String(pr.title ?? ''),
+            author: String(pr.author ?? ''),
+            url: String(pr.url ?? ''),
+            createdAt: String(pr.createdAt ?? ''),
+            updatedAt: pr.updatedAt ? String(pr.updatedAt) : undefined,
+            baseRef: pr.baseRef ? String(pr.baseRef) : undefined,
+            draft: Boolean(pr.draft)
+        };
+    });
+}
+async function PostPullRequestReminder() {
+    const webhook = core.getInput('webhook') || process.env.FEISHU_BOT_WEBHOOK || '';
+    const signKey = core.getInput('signkey') || process.env.FEISHU_BOT_SIGNKEY || '';
+    const repositoryName = core.getInput('repository_name') ||
+        core.getInput('service_name') ||
+        process.env.GITHUB_REPOSITORY ||
+        'repository';
+    const thresholdDays = parseNumberInput('threshold_days', 3);
+    const maxItems = parseNumberInput('max_items', 20);
+    const reportUrl = core.getInput('report_url') || '';
+    if (!webhook) {
+        core.setFailed('webhook is required');
+        return undefined;
+    }
+    let pullRequests;
+    try {
+        pullRequests = parsePullRequests(core.getInput('stale_prs') || '[]');
+    }
+    catch (err) {
+        core.setFailed(err instanceof Error ? err.message : String(err));
+        return undefined;
+    }
+    if (pullRequests.length === 0) {
+        console.log('No stale pull requests to notify.');
+        return undefined;
+    }
+    const webhookId = webhook.slice(webhook.indexOf('hook/') + 5);
+    const tm = Math.floor(Date.now() / 1000);
+    const sign = (0, feishu_1.sign_with_timestamp)(tm, signKey);
+    const cardMsg = (0, pr_reminder_card_1.BuildPullRequestReminderCard)({
+        timestamp: tm,
+        sign,
+        repositoryName,
+        thresholdDays,
+        pullRequests,
+        maxItems,
+        reportUrl
+    });
+    return (0, feishu_1.PostToFeishu)(webhookId, cardMsg);
+}
 
 
 /***/ }),

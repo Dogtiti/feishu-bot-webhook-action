@@ -20,14 +20,15 @@ describe('release changelog card', () => {
     expect(card.msg_type).toBe('interactive')
     expect(card.card.header.template).toBe('green')
     expect(card.card.header.title.content).toContain('viceme-engine')
-    expect(card.card.header.title.content).toContain('已发布新版本')
+    expect(card.card.header.title.content).toContain('已发布')
 
-    const noteEl = card.card.elements[0]
-    expect(noteEl.tag).toBe('note')
-    expect(noteEl.elements[0].content).toBe('服务: viceme-engine')
-    expect(noteEl.elements[1].content).toBe('版本: v0.0.3')
-    expect(noteEl.elements[2].content).toBe('提交数: 15')
-    expect(noteEl.elements[3].content).toBe('操作人: Dogtiti')
+    const summary = card.card.elements[0]
+    expect(summary.tag).toBe('column_set')
+    expect(summary.columns[0].elements[0].text.content).toContain(
+      'viceme-engine'
+    )
+    expect(summary.columns[1].elements[0].text.content).toContain('v0.0.3')
+    expect(summary.columns[2].elements[0].text.content).toContain('15')
 
     const divEl = card.card.elements.find(
       (e: any) => e.tag === 'div' && e.text?.content?.includes('新功能')
@@ -40,6 +41,10 @@ describe('release changelog card', () => {
     expect(actionEl.actions[0].url).toBe(
       'https://github.com/Leizhenpeng/viceme-engine/compare/v0.0.2...main'
     )
+
+    const noteEl = card.card.elements[card.card.elements.length - 1]
+    expect(noteEl.tag).toBe('note')
+    expect(noteEl.elements[0].content).toContain('由 AI 自动生成')
   })
 
   it('omits compare button when compareUrl is empty', () => {
