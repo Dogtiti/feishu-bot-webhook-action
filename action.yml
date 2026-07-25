@@ -12,9 +12,9 @@ inputs:
     description: 'set when you enable signature verify'
     required: false
   comment_max_length:
-    description: 'max length of comment or review text shown in the card'
+    description:
+      'deprecated compatibility input; GitHub content is now shown in full'
     required: false
-    default: '160'
   mode:
     description:
       'action mode: "event" (default) for GitHub event notifications,

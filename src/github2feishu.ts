@@ -4,39 +4,18 @@ import getTrending from './trend'
 import { sign_with_timestamp, PostToFeishu } from './feishu'
 import { BuildGithubTrendingCard, BuildGithubNotificationCard } from './card'
 
-const DEFAULT_COMMENT_MAX_LENGTH = 160
-
 type NotificationContent = {
   eventType: string
   status: string
   etitle: string
+  context: string
+  summaryTitle: string
+  summary: string
   detailurl: string
 }
 
-function parsePositiveInt(value: string, fallback: number): number {
-  const parsed = Number.parseInt(value, 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
-}
-
 function normalizeText(text: string | undefined): string {
-  return (text || '')
-    .replace(/\r\n/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-function summarizeText(text: string | undefined, maxLength: number): string {
-  const normalized = normalizeText(text)
-  if (!normalized) {
-    return ''
-  }
-
-  if (normalized.length <= maxLength) {
-    return normalized
-  }
-
-  return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`
+  return (text || '').replace(/\r\n?/g, '\n').trim()
 }
 
 function buildSubject(
@@ -45,20 +24,6 @@ function buildSubject(
   title: string | undefined
 ): string {
   return `${kind} #${number || 0} ${title || ''}`.trim()
-}
-
-function appendSummary(
-  base: string,
-  label: string,
-  text: string | undefined,
-  maxLength: number
-): string {
-  const summary = summarizeText(text, maxLength)
-  if (!summary) {
-    return base
-  }
-
-  return `${base}\n\n${label}${summary}`
 }
 
 function formatReviewLocation(
@@ -76,20 +41,24 @@ function formatReviewLocation(
 
 export function BuildNotificationContent(
   payload: Record<string, any>,
-  eventName: string,
-  commentMaxLength: number
+  eventName: string
 ): NotificationContent {
   const repoUrl = payload.repository?.html_url || ''
   let eventType = eventName
   let status = payload.action || 'closed'
   let etitle = payload.issue?.html_url || payload.pull_request?.html_url || ''
+  let contextText = ''
+  let summaryTitle = ''
+  let summary = ''
   let detailurl = ''
 
   switch (eventName) {
     case 'branch_protection_rule': {
       const rule = payload.rule
       eventType = 'Protection rule'
-      etitle = `${rule.name}\n\n${JSON.stringify(rule)}`
+      etitle = rule.name
+      summaryTitle = '规则详情'
+      summary = normalizeText(JSON.stringify(rule, null, 2))
       status = payload.action || 'created'
       detailurl = repoUrl
       break
@@ -112,8 +81,13 @@ export function BuildNotificationContent(
       const isPrComment = Boolean(issue?.pull_request)
 
       eventType = isPrComment ? 'PR comment' : 'Issue comment'
-      etitle = buildSubject(isPrComment ? 'PR' : 'Issue', issue?.number, issue?.title)
-      etitle = appendSummary(etitle, '评论摘要: ', comment?.body, commentMaxLength)
+      etitle = buildSubject(
+        isPrComment ? 'PR' : 'Issue',
+        issue?.number,
+        issue?.title
+      )
+      summaryTitle = '评论内容'
+      summary = normalizeText(comment?.body)
       detailurl = comment?.html_url || issue?.html_url || ''
       break
     }
@@ -121,7 +95,8 @@ export function BuildNotificationContent(
       const issue = payload.issue
       eventType = 'Issue'
       etitle = buildSubject('Issue', issue?.number, issue?.title)
-      etitle = appendSummary(etitle, '内容摘要: ', issue?.body, commentMaxLength)
+      summaryTitle = 'Issue 内容'
+      summary = normalizeText(issue?.body)
       detailurl = issue?.html_url || ''
       break
     }
@@ -130,7 +105,8 @@ export function BuildNotificationContent(
       eventType = 'PR opened'
       status = payload.action || pr?.state || 'opened'
       etitle = buildSubject('PR', pr?.number, pr?.title)
-      etitle = appendSummary(etitle, '描述摘要: ', pr?.body, commentMaxLength)
+      summaryTitle = 'PR 描述'
+      summary = normalizeText(pr?.body)
       detailurl = pr?.html_url || ''
       break
     }
@@ -140,7 +116,8 @@ export function BuildNotificationContent(
       eventType = 'PR review'
       status = review?.state || payload.action || 'submitted'
       etitle = buildSubject('PR', pr?.number, pr?.title)
-      etitle = appendSummary(etitle, 'Review 摘要: ', review?.body, commentMaxLength)
+      summaryTitle = 'Review 内容'
+      summary = normalizeText(review?.body)
       detailurl = review?.html_url || pr?.html_url || ''
       break
     }
@@ -157,10 +134,11 @@ export function BuildNotificationContent(
         comment?.start_line
       )
       if (location) {
-        etitle = `${etitle}\n\n代码位置: ${location}`
+        contextText = `代码位置：${location}`
       }
 
-      etitle = appendSummary(etitle, '评论摘要: ', comment?.body, commentMaxLength)
+      summaryTitle = '评论内容'
+      summary = normalizeText(comment?.body)
       detailurl = comment?.html_url || pr?.html_url || ''
       break
     }
@@ -176,7 +154,8 @@ export function BuildNotificationContent(
             : ''
       eventType = 'Push'
       etitle = refText
-      etitle = appendSummary(etitle, '提交摘要: ', headCommit?.message, commentMaxLength)
+      summaryTitle = '提交信息'
+      summary = normalizeText(headCommit?.message)
       status =
         payload['created'] === true
           ? 'created'
@@ -190,7 +169,8 @@ export function BuildNotificationContent(
       const release = payload.release
       eventType = 'Release'
       etitle = `${release['name'] || release['tag_name'] || 'Release'}`
-      etitle = appendSummary(etitle, '发布摘要: ', release['body'], commentMaxLength)
+      summaryTitle = '发布说明'
+      summary = normalizeText(release['body'])
       status = payload.action || 'published'
       detailurl = release['html_url'] || ''
       break
@@ -209,6 +189,9 @@ export function BuildNotificationContent(
     eventType,
     status,
     etitle,
+    context: contextText,
+    summaryTitle,
+    summary,
     detailurl: detailurl || repoUrl
   }
 }
@@ -230,10 +213,6 @@ export async function PostGithubEvent(): Promise<number | undefined> {
   const signKey = core.getInput('signkey')
     ? core.getInput('signkey')
     : process.env.FEISHU_BOT_SIGNKEY || ''
-  const commentMaxLength = parsePositiveInt(
-    core.getInput('comment_max_length') || process.env.FEISHU_COMMENT_MAX_LENGTH || '',
-    DEFAULT_COMMENT_MAX_LENGTH
-  )
 
   const payload = context.payload || {}
   console.log(payload)
@@ -254,11 +233,7 @@ export async function PostGithubEvent(): Promise<number | undefined> {
     return PostGithubTrending(webhookId, tm, sign)
   }
 
-  const notification = BuildNotificationContent(
-    payload,
-    eventName,
-    commentMaxLength
-  )
+  const notification = BuildNotificationContent(payload, eventName)
   const cardmsg = BuildGithubNotificationCard(
     tm,
     sign,
@@ -268,7 +243,12 @@ export async function PostGithubEvent(): Promise<number | undefined> {
     actor,
     notification.status,
     notification.etitle,
-    notification.detailurl
+    notification.detailurl,
+    {
+      context: notification.context,
+      summaryTitle: notification.summaryTitle,
+      summary: notification.summary
+    }
   )
 
   return PostToFeishu(webhookId, cardmsg)

@@ -12,19 +12,37 @@ describe('notification card', () => {
         'blue',
         'Dogtiti',
         'created',
-        'PR #54 optimize feishu notifications\n\n评论摘要: keep it short',
-        'https://github.com/example/repo/pull/54#issuecomment-1'
+        'PR #54 optimize feishu notifications',
+        'https://github.com/example/repo/pull/54#issuecomment-1',
+        {
+          summaryTitle: '评论内容',
+          summary: 'keep it short'
+        }
       )
     )
 
     expect(payload.msg_type).toBe('interactive')
-    expect(payload.card.header.title.content).toBe('项目 viceme-engine 有新的变化')
-    expect(payload.card.elements[0].tag).toBe('note')
-    expect(payload.card.elements[0].elements[1].content).toBe('操作人: Dogtiti')
+    expect(payload.card.header.title.content).toBe(
+      '项目 viceme-engine 有新的变化'
+    )
+    expect(payload.card.elements[0].text.tag).toBe('lark_md')
+    expect(payload.card.elements[0].text.content).toBe(
+      '**PR #54 optimize feishu notifications**'
+    )
+    expect(payload.card.elements[1].tag).toBe('note')
+    expect(payload.card.elements[1].elements[1].content).toBe('操作人：Dogtiti')
+    expect(payload.card.elements[2].tag).toBe('hr')
+    expect(payload.card.elements[3].text.content).toBe(
+      '**评论内容**\nkeep it short'
+    )
+    expect(payload.card.elements[4].actions[0].text.content).toBe(
+      '在 GitHub 查看'
+    )
     expect(JSON.stringify(payload)).not.toContain('template_id')
   })
 
-  it('summarizes issue comments instead of forwarding the full body', () => {
+  it('keeps the complete issue comment body', () => {
+    const body = 'A'.repeat(200)
     const notification = BuildNotificationContent(
       {
         action: 'created',
@@ -35,20 +53,76 @@ describe('notification card', () => {
           pull_request: {}
         },
         comment: {
-          body: 'A'.repeat(200),
+          body,
           html_url: 'https://github.com/example/repo/pull/54#issuecomment-1'
         }
       },
-      'issue_comment',
-      40
+      'issue_comment'
     )
 
     expect(notification.eventType).toBe('PR comment')
-    expect(notification.etitle).toContain('PR #54 docs: 更新 feishu.yml 工作流')
-    expect(notification.etitle).toContain('评论摘要: ')
-    expect(notification.etitle).toContain('…')
+    expect(notification.etitle).toBe('PR #54 docs: 更新 feishu.yml 工作流')
+    expect(notification.summaryTitle).toBe('评论内容')
+    expect(notification.summary).toBe(body)
+    expect(notification.summary).not.toContain('…')
     expect(notification.detailurl).toBe(
       'https://github.com/example/repo/pull/54#issuecomment-1'
     )
+  })
+
+  it('keeps GitHub markdown structure in a longer PR preview', () => {
+    const body = [
+      '## 变更内容',
+      '',
+      '- 删除已失效的 `.claude/skills/steel-browser` 链接',
+      '- 将开发任务设计文档从根 `docs/` 迁移到 `packages/viceme-sdk/docs/`',
+      '- 更新 SDK 代码中的文档路径',
+      '- 补充迁移后的维护说明'
+    ].join('\n')
+
+    const notification = BuildNotificationContent(
+      {
+        action: 'opened',
+        pull_request: {
+          number: 21,
+          title: 'chore: clean up migration leftovers',
+          body,
+          html_url: 'https://github.com/example/repo/pull/21'
+        }
+      },
+      'pull_request'
+    )
+
+    expect(notification.summaryTitle).toBe('PR 描述')
+    expect(notification.summary).toBe(body)
+  })
+
+  it('neutralizes Feishu mention tags in GitHub-authored markdown', () => {
+    const payload = JSON.parse(
+      BuildGithubNotificationCard(
+        1716283459,
+        'signature',
+        'viceme-engine',
+        'PR opened',
+        'blue',
+        'Dogtiti',
+        'opened',
+        'PR #21 safe preview',
+        'https://github.com/example/repo/pull/21',
+        {
+          summaryTitle: 'PR 描述',
+          summary: 'normal text\n<at id=all></at>'
+        }
+      )
+    )
+
+    const summary = payload.card.elements.find(
+      (element: any) =>
+        element.tag === 'div' &&
+        element.text?.tag === 'lark_md' &&
+        element.text.content.includes('normal text')
+    )
+    expect(summary.text.content).not.toContain('<at id=all>')
+    expect(summary.text.content).toContain('&lt;at id=all&gt;')
   })
 })

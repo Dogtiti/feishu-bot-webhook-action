@@ -112,9 +112,9 @@ input variables.
   回调webhook
 - `signkey`: optional, the sign key for the bot when you enable the signature
   verification. 可选，自定义机器人的签名密钥，当启用签名校验时需要
-- `comment_max_length`: optional, max length of comment/review content shown in
-  the card, defaults to `160`. 可选，评论/Review 在卡片中显示的最大长度，默认
-  `160`
+- `comment_max_length`: deprecated compatibility input. GitHub bodies, comments,
+  and reviews are now shown in full. 兼容旧工作流保留，GitHub 正文、评论和
+  Review 现在会完整展示。
 - `mode`: optional, action mode. Use `event` for GitHub event notifications,
   `release-changelog` for release notes, or `pr-reminder` for stale PR
   reminders. 可选，消息模式。

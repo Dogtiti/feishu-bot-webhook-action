@@ -43750,24 +43750,46 @@ function buildBaseCard(tm, sign, template, title, elements) {
     };
     return JSON.stringify(card);
 }
-function buildNotificationElements(eventType, user, status, etitle, detailurl) {
+function buildNotificationElements(eventType, user, status, etitle, detailurl, details) {
     const elements = [
-        {
-            tag: 'note',
-            elements: [
-                { tag: 'plain_text', content: `事件: ${eventType}` },
-                { tag: 'plain_text', content: `操作人: ${user}` },
-                { tag: 'plain_text', content: `状态: ${status}` }
-            ]
-        },
         {
             tag: 'div',
             text: {
-                tag: 'plain_text',
-                content: etitle
+                tag: 'lark_md',
+                content: `**${escapeInlineMarkdown(etitle)}**`
             }
+        },
+        {
+            tag: 'note',
+            elements: [
+                { tag: 'plain_text', content: `事件：${eventType}` },
+                { tag: 'plain_text', content: `操作人：${user}` },
+                { tag: 'plain_text', content: `状态：${status}` }
+            ]
         }
     ];
+    if (details.context) {
+        elements.push({
+            tag: 'note',
+            elements: [{ tag: 'plain_text', content: details.context }]
+        });
+    }
+    if (details.summary) {
+        const summaryTitle = details.summaryTitle?.trim();
+        const summaryContent = [
+            summaryTitle ? `**${escapeInlineMarkdown(summaryTitle)}**` : '',
+            sanitizeLarkMarkdown(details.summary)
+        ]
+            .filter(Boolean)
+            .join('\n');
+        elements.push({ tag: 'hr' }, {
+            tag: 'div',
+            text: {
+                tag: 'lark_md',
+                content: summaryContent
+            }
+        });
+    }
     if (detailurl) {
         elements.push({
             tag: 'action',
@@ -43776,7 +43798,7 @@ function buildNotificationElements(eventType, user, status, etitle, detailurl) {
                     tag: 'button',
                     text: {
                         tag: 'plain_text',
-                        content: '查看详情'
+                        content: '在 GitHub 查看'
                     },
                     type: 'primary',
                     url: detailurl
@@ -43785,6 +43807,12 @@ function buildNotificationElements(eventType, user, status, etitle, detailurl) {
         });
     }
     return elements;
+}
+function escapeInlineMarkdown(text) {
+    return text.replace(/([\\`*_[\]~])/g, '\\$1');
+}
+function sanitizeLarkMarkdown(text) {
+    return text.replace(/<(\/?(?:at|person|raw)\b[^>]*)>/gi, '&lt;$1&gt;');
 }
 function buildTrendingMarkdown(repos) {
     if (repos.length === 0) {
@@ -43805,8 +43833,8 @@ function buildTrendingMarkdown(repos) {
     })
         .join('\n\n');
 }
-function BuildGithubNotificationCard(tm, sign, repo, eventType, color, user, status, etitle, detailurl) {
-    return buildBaseCard(tm, sign, color, `项目 ${repo} 有新的变化`, buildNotificationElements(eventType, user, status, etitle, detailurl));
+function BuildGithubNotificationCard(tm, sign, repo, eventType, color, user, status, etitle, detailurl, details = {}) {
+    return buildBaseCard(tm, sign, color, `项目 ${repo} 有新的变化`, buildNotificationElements(eventType, user, status, etitle, detailurl, details));
 }
 function BuildGithubTrendingCard(tm, sign, repos) {
     return buildBaseCard(tm, sign, 'blue', 'GitHub Trending', [
@@ -44064,37 +44092,11 @@ const github_1 = __nccwpck_require__(5438);
 const trend_1 = __importDefault(__nccwpck_require__(4904));
 const feishu_1 = __nccwpck_require__(3026);
 const card_1 = __nccwpck_require__(4647);
-const DEFAULT_COMMENT_MAX_LENGTH = 160;
-function parsePositiveInt(value, fallback) {
-    const parsed = Number.parseInt(value, 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
 function normalizeText(text) {
-    return (text || '')
-        .replace(/\r\n/g, '\n')
-        .replace(/[ \t]+/g, ' ')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-}
-function summarizeText(text, maxLength) {
-    const normalized = normalizeText(text);
-    if (!normalized) {
-        return '';
-    }
-    if (normalized.length <= maxLength) {
-        return normalized;
-    }
-    return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+    return (text || '').replace(/\r\n?/g, '\n').trim();
 }
 function buildSubject(kind, number, title) {
     return `${kind} #${number || 0} ${title || ''}`.trim();
-}
-function appendSummary(base, label, text, maxLength) {
-    const summary = summarizeText(text, maxLength);
-    if (!summary) {
-        return base;
-    }
-    return `${base}\n\n${label}${summary}`;
 }
 function formatReviewLocation(path, line, startLine) {
     if (!path) {
@@ -44103,17 +44105,22 @@ function formatReviewLocation(path, line, startLine) {
     const lineNumber = line || startLine;
     return lineNumber ? `${path}:${lineNumber}` : path;
 }
-function BuildNotificationContent(payload, eventName, commentMaxLength) {
+function BuildNotificationContent(payload, eventName) {
     const repoUrl = payload.repository?.html_url || '';
     let eventType = eventName;
     let status = payload.action || 'closed';
     let etitle = payload.issue?.html_url || payload.pull_request?.html_url || '';
+    let contextText = '';
+    let summaryTitle = '';
+    let summary = '';
     let detailurl = '';
     switch (eventName) {
         case 'branch_protection_rule': {
             const rule = payload.rule;
             eventType = 'Protection rule';
-            etitle = `${rule.name}\n\n${JSON.stringify(rule)}`;
+            etitle = rule.name;
+            summaryTitle = '规则详情';
+            summary = normalizeText(JSON.stringify(rule, null, 2));
             status = payload.action || 'created';
             detailurl = repoUrl;
             break;
@@ -44136,7 +44143,8 @@ function BuildNotificationContent(payload, eventName, commentMaxLength) {
             const isPrComment = Boolean(issue?.pull_request);
             eventType = isPrComment ? 'PR comment' : 'Issue comment';
             etitle = buildSubject(isPrComment ? 'PR' : 'Issue', issue?.number, issue?.title);
-            etitle = appendSummary(etitle, '评论摘要: ', comment?.body, commentMaxLength);
+            summaryTitle = '评论内容';
+            summary = normalizeText(comment?.body);
             detailurl = comment?.html_url || issue?.html_url || '';
             break;
         }
@@ -44144,7 +44152,8 @@ function BuildNotificationContent(payload, eventName, commentMaxLength) {
             const issue = payload.issue;
             eventType = 'Issue';
             etitle = buildSubject('Issue', issue?.number, issue?.title);
-            etitle = appendSummary(etitle, '内容摘要: ', issue?.body, commentMaxLength);
+            summaryTitle = 'Issue 内容';
+            summary = normalizeText(issue?.body);
             detailurl = issue?.html_url || '';
             break;
         }
@@ -44153,7 +44162,8 @@ function BuildNotificationContent(payload, eventName, commentMaxLength) {
             eventType = 'PR opened';
             status = payload.action || pr?.state || 'opened';
             etitle = buildSubject('PR', pr?.number, pr?.title);
-            etitle = appendSummary(etitle, '描述摘要: ', pr?.body, commentMaxLength);
+            summaryTitle = 'PR 描述';
+            summary = normalizeText(pr?.body);
             detailurl = pr?.html_url || '';
             break;
         }
@@ -44163,7 +44173,8 @@ function BuildNotificationContent(payload, eventName, commentMaxLength) {
             eventType = 'PR review';
             status = review?.state || payload.action || 'submitted';
             etitle = buildSubject('PR', pr?.number, pr?.title);
-            etitle = appendSummary(etitle, 'Review 摘要: ', review?.body, commentMaxLength);
+            summaryTitle = 'Review 内容';
+            summary = normalizeText(review?.body);
             detailurl = review?.html_url || pr?.html_url || '';
             break;
         }
@@ -44175,9 +44186,10 @@ function BuildNotificationContent(payload, eventName, commentMaxLength) {
             etitle = buildSubject('PR', pr?.number, pr?.title);
             const location = formatReviewLocation(comment?.path, comment?.line, comment?.start_line);
             if (location) {
-                etitle = `${etitle}\n\n代码位置: ${location}`;
+                contextText = `代码位置：${location}`;
             }
-            etitle = appendSummary(etitle, '评论摘要: ', comment?.body, commentMaxLength);
+            summaryTitle = '评论内容';
+            summary = normalizeText(comment?.body);
             detailurl = comment?.html_url || pr?.html_url || '';
             break;
         }
@@ -44190,7 +44202,8 @@ function BuildNotificationContent(payload, eventName, commentMaxLength) {
                     : '';
             eventType = 'Push';
             etitle = refText;
-            etitle = appendSummary(etitle, '提交摘要: ', headCommit?.message, commentMaxLength);
+            summaryTitle = '提交信息';
+            summary = normalizeText(headCommit?.message);
             status =
                 payload['created'] === true
                     ? 'created'
@@ -44204,7 +44217,8 @@ function BuildNotificationContent(payload, eventName, commentMaxLength) {
             const release = payload.release;
             eventType = 'Release';
             etitle = `${release['name'] || release['tag_name'] || 'Release'}`;
-            etitle = appendSummary(etitle, '发布摘要: ', release['body'], commentMaxLength);
+            summaryTitle = '发布说明';
+            summary = normalizeText(release['body']);
             status = payload.action || 'published';
             detailurl = release['html_url'] || '';
             break;
@@ -44222,6 +44236,9 @@ function BuildNotificationContent(payload, eventName, commentMaxLength) {
         eventType,
         status,
         etitle,
+        context: contextText,
+        summaryTitle,
+        summary,
         detailurl: detailurl || repoUrl
     };
 }
@@ -44237,7 +44254,6 @@ async function PostGithubEvent() {
     const signKey = core.getInput('signkey')
         ? core.getInput('signkey')
         : process.env.FEISHU_BOT_SIGNKEY || '';
-    const commentMaxLength = parsePositiveInt(core.getInput('comment_max_length') || process.env.FEISHU_COMMENT_MAX_LENGTH || '', DEFAULT_COMMENT_MAX_LENGTH);
     const payload = github_1.context.payload || {};
     console.log(payload);
     const webhookId = webhook.slice(webhook.indexOf('hook/') + 5);
@@ -44252,8 +44268,12 @@ async function PostGithubEvent() {
     if (eventName === 'schedule') {
         return PostGithubTrending(webhookId, tm, sign);
     }
-    const notification = BuildNotificationContent(payload, eventName, commentMaxLength);
-    const cardmsg = (0, card_1.BuildGithubNotificationCard)(tm, sign, repo, notification.eventType, 'blue', actor, notification.status, notification.etitle, notification.detailurl);
+    const notification = BuildNotificationContent(payload, eventName);
+    const cardmsg = (0, card_1.BuildGithubNotificationCard)(tm, sign, repo, notification.eventType, 'blue', actor, notification.status, notification.etitle, notification.detailurl, {
+        context: notification.context,
+        summaryTitle: notification.summaryTitle,
+        summary: notification.summary
+    });
     return (0, feishu_1.PostToFeishu)(webhookId, cardmsg);
 }
 

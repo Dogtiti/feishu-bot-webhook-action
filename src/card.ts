@@ -12,14 +12,14 @@ type CardElement =
     }
   | {
       tag: 'note'
-      elements: Array<{
+      elements: {
         tag: 'plain_text'
         content: string
-      }>
+      }[]
     }
   | {
       tag: 'action'
-      actions: Array<{
+      actions: {
         tag: 'button'
         text: {
           tag: 'plain_text'
@@ -27,8 +27,17 @@ type CardElement =
         }
         type: 'primary' | 'default'
         url: string
-      }>
+      }[]
     }
+  | {
+      tag: 'hr'
+    }
+
+export type GithubNotificationDetails = {
+  context?: string
+  summaryTitle?: string
+  summary?: string
+}
 
 type RawCardMessage = {
   timestamp: string
@@ -85,25 +94,54 @@ function buildNotificationElements(
   user: string,
   status: string,
   etitle: string,
-  detailurl: string
+  detailurl: string,
+  details: GithubNotificationDetails
 ): CardElement[] {
   const elements: CardElement[] = [
     {
-      tag: 'note',
-      elements: [
-        { tag: 'plain_text', content: `事件: ${eventType}` },
-        { tag: 'plain_text', content: `操作人: ${user}` },
-        { tag: 'plain_text', content: `状态: ${status}` }
-      ]
-    },
-    {
       tag: 'div',
       text: {
-        tag: 'plain_text',
-        content: etitle
+        tag: 'lark_md',
+        content: `**${escapeInlineMarkdown(etitle)}**`
       }
+    },
+    {
+      tag: 'note',
+      elements: [
+        { tag: 'plain_text', content: `事件：${eventType}` },
+        { tag: 'plain_text', content: `操作人：${user}` },
+        { tag: 'plain_text', content: `状态：${status}` }
+      ]
     }
   ]
+
+  if (details.context) {
+    elements.push({
+      tag: 'note',
+      elements: [{ tag: 'plain_text', content: details.context }]
+    })
+  }
+
+  if (details.summary) {
+    const summaryTitle = details.summaryTitle?.trim()
+    const summaryContent = [
+      summaryTitle ? `**${escapeInlineMarkdown(summaryTitle)}**` : '',
+      sanitizeLarkMarkdown(details.summary)
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    elements.push(
+      { tag: 'hr' },
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: summaryContent
+        }
+      }
+    )
+  }
 
   if (detailurl) {
     elements.push({
@@ -113,7 +151,7 @@ function buildNotificationElements(
           tag: 'button',
           text: {
             tag: 'plain_text',
-            content: '查看详情'
+            content: '在 GitHub 查看'
           },
           type: 'primary',
           url: detailurl
@@ -123,6 +161,14 @@ function buildNotificationElements(
   }
 
   return elements
+}
+
+function escapeInlineMarkdown(text: string): string {
+  return text.replace(/([\\`*_[\]~])/g, '\\$1')
+}
+
+function sanitizeLarkMarkdown(text: string): string {
+  return text.replace(/<(\/?(?:at|person|raw)\b[^>]*)>/gi, '&lt;$1&gt;')
 }
 
 function buildTrendingMarkdown(repos: Repository[]): string {
@@ -156,14 +202,22 @@ export function BuildGithubNotificationCard(
   user: string,
   status: string,
   etitle: string,
-  detailurl: string
+  detailurl: string,
+  details: GithubNotificationDetails = {}
 ): string {
   return buildBaseCard(
     tm,
     sign,
     color,
     `项目 ${repo} 有新的变化`,
-    buildNotificationElements(eventType, user, status, etitle, detailurl)
+    buildNotificationElements(
+      eventType,
+      user,
+      status,
+      etitle,
+      detailurl,
+      details
+    )
   )
 }
 
