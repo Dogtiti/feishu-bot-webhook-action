@@ -41,6 +41,12 @@ type CardV2MarkdownElement = {
   margin: string
 }
 
+type CardV2DividerElement = {
+  tag: 'hr'
+  element_id: string
+  margin: string
+}
+
 type CardV2ButtonElement = {
   tag: 'button'
   element_id: string
@@ -58,7 +64,10 @@ type CardV2ButtonElement = {
   margin: string
 }
 
-type CardV2Element = CardV2MarkdownElement | CardV2ButtonElement
+type CardV2Element =
+  | CardV2MarkdownElement
+  | CardV2DividerElement
+  | CardV2ButtonElement
 
 export type GithubNotificationDetails = {
   context?: string
@@ -218,13 +227,17 @@ function buildNotificationElementsV2(
   if (details.summary) {
     const summaryTitle = details.summaryTitle?.trim()
     const summaryContent = [
-      '<hr>',
       summaryTitle ? `**${escapeInlineMarkdown(summaryTitle)}**` : '',
       sanitizeFeishuMarkdown(details.summary)
     ]
       .filter(Boolean)
-      .join('\n\n')
+      .join('\n')
 
+    elements.push({
+      tag: 'hr',
+      element_id: 'github_divider',
+      margin: '0px 0px 0px 0px'
+    })
     elements.push({
       tag: 'markdown',
       element_id: 'github_summary',

@@ -43808,12 +43808,16 @@ function buildNotificationElementsV2(eventType, user, status, etitle, detailurl,
     if (details.summary) {
         const summaryTitle = details.summaryTitle?.trim();
         const summaryContent = [
-            '<hr>',
             summaryTitle ? `**${escapeInlineMarkdown(summaryTitle)}**` : '',
             sanitizeFeishuMarkdown(details.summary)
         ]
             .filter(Boolean)
-            .join('\n\n');
+            .join('\n');
+        elements.push({
+            tag: 'hr',
+            element_id: 'github_divider',
+            margin: '0px 0px 0px 0px'
+        });
         elements.push({
             tag: 'markdown',
             element_id: 'github_summary',

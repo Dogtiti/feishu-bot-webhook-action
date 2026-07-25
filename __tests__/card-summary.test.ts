@@ -31,11 +31,18 @@ describe('notification card', () => {
       '**PR #54 optimize feishu notifications**'
     )
     expect(payload.card.body.elements[1].content).toContain('操作人：Dogtiti')
-    expect(payload.card.body.elements[2].content).toBe(
-      '<hr>\n\n**评论内容**\n\nkeep it short'
+    expect(payload.card.body.elements[2]).toEqual(
+      expect.objectContaining({
+        tag: 'hr',
+        element_id: 'github_divider',
+        margin: '0px 0px 0px 0px'
+      })
     )
-    expect(payload.card.body.elements[3].text.content).toBe('在 GitHub 查看')
-    expect(payload.card.body.elements[3].behaviors[0]).toEqual(
+    expect(payload.card.body.elements[3].content).toBe(
+      '**评论内容**\nkeep it short'
+    )
+    expect(payload.card.body.elements[4].text.content).toBe('在 GitHub 查看')
+    expect(payload.card.body.elements[4].behaviors[0]).toEqual(
       expect.objectContaining({
         type: 'open_url',
         default_url: 'https://github.com/example/repo/pull/54#issuecomment-1'
