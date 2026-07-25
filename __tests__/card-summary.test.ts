@@ -25,19 +25,23 @@ describe('notification card', () => {
     expect(payload.card.header.title.content).toBe(
       '项目 viceme-engine 有新的变化'
     )
-    expect(payload.card.elements[0].text.tag).toBe('lark_md')
-    expect(payload.card.elements[0].text.content).toBe(
+    expect(payload.card.schema).toBe('2.0')
+    expect(payload.card.body.elements[0].tag).toBe('markdown')
+    expect(payload.card.body.elements[0].content).toBe(
       '**PR #54 optimize feishu notifications**'
     )
-    expect(payload.card.elements[1].tag).toBe('note')
-    expect(payload.card.elements[1].elements[1].content).toBe('操作人：Dogtiti')
-    expect(payload.card.elements[2].tag).toBe('hr')
-    expect(payload.card.elements[3].text.content).toBe(
-      '**评论内容**\nkeep it short'
+    expect(payload.card.body.elements[1].content).toContain('操作人：Dogtiti')
+    expect(payload.card.body.elements[2].content).toBe(
+      '<hr>\n\n**评论内容**\n\nkeep it short'
     )
-    expect(payload.card.elements[4].actions[0].text.content).toBe(
-      '在 GitHub 查看'
+    expect(payload.card.body.elements[3].text.content).toBe('在 GitHub 查看')
+    expect(payload.card.body.elements[3].behaviors[0]).toEqual(
+      expect.objectContaining({
+        type: 'open_url',
+        default_url: 'https://github.com/example/repo/pull/54#issuecomment-1'
+      })
     )
+    expect(JSON.stringify(payload.card.body)).not.toContain('lark_md')
     expect(JSON.stringify(payload)).not.toContain('template_id')
   })
 
@@ -95,6 +99,32 @@ describe('notification card', () => {
 
     expect(notification.summaryTitle).toBe('PR 描述')
     expect(notification.summary).toBe(body)
+
+    const payload = JSON.parse(
+      BuildGithubNotificationCard(
+        1716283459,
+        'signature',
+        'viceme-engine',
+        notification.eventType,
+        'blue',
+        'Dogtiti',
+        notification.status,
+        notification.etitle,
+        notification.detailurl,
+        {
+          summaryTitle: notification.summaryTitle,
+          summary: notification.summary
+        }
+      )
+    )
+    const summary = payload.card.body.elements.find(
+      (element: any) => element.element_id === 'github_summary'
+    )
+    expect(summary.tag).toBe('markdown')
+    expect(summary.content).toContain('## 变更内容')
+    expect(summary.content).toContain(
+      '- 删除已失效的 `.claude/skills/steel-browser` 链接'
+    )
   })
 
   it('neutralizes Feishu mention tags in GitHub-authored markdown', () => {
@@ -107,7 +137,7 @@ describe('notification card', () => {
         'blue',
         'Dogtiti',
         'opened',
-        'PR #21 safe preview',
+        'PR #21 safe preview <at id=all></at>',
         'https://github.com/example/repo/pull/21',
         {
           summaryTitle: 'PR 描述',
@@ -116,13 +146,15 @@ describe('notification card', () => {
       )
     )
 
-    const summary = payload.card.elements.find(
-      (element: any) =>
-        element.tag === 'div' &&
-        element.text?.tag === 'lark_md' &&
-        element.text.content.includes('normal text')
+    const summary = payload.card.body.elements.find(
+      (element: any) => element.element_id === 'github_summary'
     )
-    expect(summary.text.content).not.toContain('<at id=all>')
-    expect(summary.text.content).toContain('&lt;at id=all&gt;')
+    const title = payload.card.body.elements.find(
+      (element: any) => element.element_id === 'github_title'
+    )
+    expect(title.content).not.toContain('<at id=all>')
+    expect(title.content).toContain('&lt;at id=all&gt;')
+    expect(summary.content).not.toContain('<at id=all>')
+    expect(summary.content).toContain('&lt;at id=all&gt;')
   })
 })

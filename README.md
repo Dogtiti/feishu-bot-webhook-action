@@ -168,13 +168,14 @@ requests that have stayed open longer than your threshold.
 
 #### 建立自己的消息卡片
 
-The notification card is now built directly in code instead of relying on a
-remote Feishu CardKit template id. You can customize the layout in
-`src/card.ts`, and tune event text/summary behavior in `src/github2feishu.ts`.
+The notification card is now built directly in code with Feishu Card JSON 2.0
+and its full Markdown component instead of relying on a remote CardKit template
+id. You can customize the layout in `src/card.ts`, and tune event text/summary
+behavior in `src/github2feishu.ts`.
 
-现在通知卡片已经改成在代码里直接生成，不再依赖飞书远端 CardKit 模版 id。你可以直
-接在 `src/card.ts` 里改卡片布局，在 `src/github2feishu.ts` 里改事件文案和摘要逻
-辑。
+现在通知卡片已经使用飞书 Card JSON 2.0 和完整 Markdown 组件在代码里直接生成，不
+再依赖飞书远端 CardKit 模版 id。你可以直接在 `src/card.ts` 里改卡片布局，在
+`src/github2feishu.ts` 里改事件文案和摘要逻辑。
 
 This makes it easier to control:
 

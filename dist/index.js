@@ -43750,69 +43750,105 @@ function buildBaseCard(tm, sign, template, title, elements) {
     };
     return JSON.stringify(card);
 }
-function buildNotificationElements(eventType, user, status, etitle, detailurl, details) {
+function buildNotificationCardV2(tm, sign, template, title, elements) {
+    const card = {
+        timestamp: `${tm}`,
+        sign,
+        msg_type: 'interactive',
+        card: {
+            schema: '2.0',
+            config: {
+                enable_forward: true,
+                width_mode: 'fill'
+            },
+            header: {
+                template,
+                padding: '12px 12px 12px 12px',
+                title: {
+                    tag: 'plain_text',
+                    content: title
+                }
+            },
+            body: {
+                direction: 'vertical',
+                padding: '12px 12px 12px 12px',
+                vertical_spacing: '8px',
+                elements
+            }
+        }
+    };
+    return JSON.stringify(card);
+}
+function buildNotificationElementsV2(eventType, user, status, etitle, detailurl, details) {
     const elements = [
         {
-            tag: 'div',
-            text: {
-                tag: 'lark_md',
-                content: `**${escapeInlineMarkdown(etitle)}**`
-            }
+            tag: 'markdown',
+            element_id: 'github_title',
+            content: `**${escapeInlineMarkdown(etitle)}**`,
+            text_align: 'left',
+            margin: '0px 0px 0px 0px'
         },
         {
-            tag: 'note',
-            elements: [
-                { tag: 'plain_text', content: `事件：${eventType}` },
-                { tag: 'plain_text', content: `操作人：${user}` },
-                { tag: 'plain_text', content: `状态：${status}` }
-            ]
+            tag: 'markdown',
+            element_id: 'github_meta',
+            content: `<font color='grey'>事件：${escapeInlineMarkdown(eventType)} · 操作人：${escapeInlineMarkdown(user)} · 状态：${escapeInlineMarkdown(status)}</font>`,
+            text_align: 'left',
+            margin: '0px 0px 0px 0px'
         }
     ];
     if (details.context) {
         elements.push({
-            tag: 'note',
-            elements: [{ tag: 'plain_text', content: details.context }]
+            tag: 'markdown',
+            element_id: 'github_context',
+            content: `<font color='grey'>${escapeInlineMarkdown(details.context)}</font>`,
+            text_align: 'left',
+            margin: '0px 0px 0px 0px'
         });
     }
     if (details.summary) {
         const summaryTitle = details.summaryTitle?.trim();
         const summaryContent = [
+            '<hr>',
             summaryTitle ? `**${escapeInlineMarkdown(summaryTitle)}**` : '',
-            sanitizeLarkMarkdown(details.summary)
+            sanitizeFeishuMarkdown(details.summary)
         ]
             .filter(Boolean)
-            .join('\n');
-        elements.push({ tag: 'hr' }, {
-            tag: 'div',
-            text: {
-                tag: 'lark_md',
-                content: summaryContent
-            }
+            .join('\n\n');
+        elements.push({
+            tag: 'markdown',
+            element_id: 'github_summary',
+            content: summaryContent,
+            text_align: 'left',
+            margin: '0px 0px 0px 0px'
         });
     }
     if (detailurl) {
         elements.push({
-            tag: 'action',
-            actions: [
+            tag: 'button',
+            element_id: 'github_link',
+            text: {
+                tag: 'plain_text',
+                content: '在 GitHub 查看'
+            },
+            type: 'primary',
+            width: 'default',
+            size: 'medium',
+            behaviors: [
                 {
-                    tag: 'button',
-                    text: {
-                        tag: 'plain_text',
-                        content: '在 GitHub 查看'
-                    },
-                    type: 'primary',
-                    url: detailurl
+                    type: 'open_url',
+                    default_url: detailurl
                 }
-            ]
+            ],
+            margin: '4px 0px 0px 0px'
         });
     }
     return elements;
 }
 function escapeInlineMarkdown(text) {
-    return text.replace(/([\\`*_[\]~])/g, '\\$1');
+    return sanitizeFeishuMarkdown(text).replace(/([\\`*_[\]~])/g, '\\$1');
 }
-function sanitizeLarkMarkdown(text) {
-    return text.replace(/<(\/?(?:at|person|raw)\b[^>]*)>/gi, '&lt;$1&gt;');
+function sanitizeFeishuMarkdown(text) {
+    return text.replace(/<(\/?(?:at|person|raw|text_tag|font|link|number_tag|local_datetime)\b[^>]*)>/gi, '&lt;$1&gt;');
 }
 function buildTrendingMarkdown(repos) {
     if (repos.length === 0) {
@@ -43834,7 +43870,7 @@ function buildTrendingMarkdown(repos) {
         .join('\n\n');
 }
 function BuildGithubNotificationCard(tm, sign, repo, eventType, color, user, status, etitle, detailurl, details = {}) {
-    return buildBaseCard(tm, sign, color, `项目 ${repo} 有新的变化`, buildNotificationElements(eventType, user, status, etitle, detailurl, details));
+    return buildNotificationCardV2(tm, sign, color, `项目 ${repo} 有新的变化`, buildNotificationElementsV2(eventType, user, status, etitle, detailurl, details));
 }
 function BuildGithubTrendingCard(tm, sign, repos) {
     return buildBaseCard(tm, sign, 'blue', 'GitHub Trending', [
