@@ -23,27 +23,47 @@ export async function PostToFeishu(
       }
     }
     const req = https.request(options, res => {
-      const statusCode = res.statusCode
-      res.on('data', d => {
-        process.stdout.write(d)
-        const result: string = d.toString()
-        try {
-          const json = JSON.parse(result)
-          core.debug(json.code)
-          core.debug(json.msg)
-        } catch (err) {
-          console.log(err)
-        }
-      })
-
+      const chunks: Buffer[] = []
+      res.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)))
+      res.on('error', () => reject(new Error('Feishu response stream failed')))
+      res.on('aborted', () => reject(new Error('Feishu response was aborted')))
       res.on('end', () => {
-        resolve(statusCode)
+        if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+          reject(
+            new Error(
+              `Feishu HTTP request failed (${res.statusCode || 'unknown'})`
+            )
+          )
+          return
+        }
+        let result: { code?: unknown; StatusCode?: unknown }
+        try {
+          result = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        } catch {
+          reject(new Error('Feishu returned invalid JSON'))
+          return
+        }
+        // HTTP 200 can still carry a rejected card. Only an explicit business
+        // success counts as delivery; support both documented webhook envelopes.
+        const code = result?.code ?? result?.StatusCode
+        if (code !== 0) {
+          reject(
+            new Error(
+              `Feishu rejected the message (code ${typeof code === 'number' ? code : 'missing/invalid'})`
+            )
+          )
+          return
+        }
+        core.debug('Feishu accepted the message (code 0)')
+        resolve(res.statusCode)
       })
     })
-    req.on('error', e => {
-      console.error(e)
-      reject(e)
+    req.setTimeout(15000, () => {
+      req.destroy(new Error('Feishu request timed out'))
     })
+    req.on('error', () =>
+      reject(new Error('Feishu request failed or timed out'))
+    )
     req.write(content)
     req.end()
   })

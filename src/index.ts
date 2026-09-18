@@ -15,5 +15,15 @@ async function run(): Promise<void> {
   }
 }
 
+async function main(): Promise<void> {
+  try {
+    await run()
+  } catch (error) {
+    core.setFailed(
+      error instanceof Error ? error.message : 'Notification failed'
+    )
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-run()
+main()

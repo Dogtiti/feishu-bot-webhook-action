@@ -85,7 +85,13 @@ describe('independent release footer', () => {
     const row = card.card.elements.find(
       (e: any) => e.tag === 'column_set' && e.background_style === 'default'
     )
-    expect(row.columns[0].elements[0].actions[0].url).toBe(params.compareUrl)
+    expect(row.columns[0].elements[0].url).toBe(params.compareUrl)
+    expect(row.columns[0].elements[0].tag).toBe('button')
+    expect(
+      row.columns
+        .flatMap((c: any) => c.elements)
+        .some((e: any) => e.tag === 'action')
+    ).toBe(false)
     expect(row.columns[1].elements[0]).toEqual({
       tag: 'markdown',
       text_align: 'right',

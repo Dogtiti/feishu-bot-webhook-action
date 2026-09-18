@@ -44064,27 +44064,36 @@ async function PostToFeishu(id, content) {
             }
         };
         const req = https.request(options, res => {
-            const statusCode = res.statusCode;
-            res.on('data', d => {
-                process.stdout.write(d);
-                const result = d.toString();
-                try {
-                    const json = JSON.parse(result);
-                    core.debug(json.code);
-                    core.debug(json.msg);
-                }
-                catch (err) {
-                    console.log(err);
-                }
-            });
+            const chunks = [];
+            res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+            res.on('error', () => reject(new Error('Feishu response stream failed')));
+            res.on('aborted', () => reject(new Error('Feishu response was aborted')));
             res.on('end', () => {
-                resolve(statusCode);
+                if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+                    reject(new Error(`Feishu HTTP request failed (${res.statusCode || 'unknown'})`));
+                    return;
+                }
+                let result;
+                try {
+                    result = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+                }
+                catch {
+                    reject(new Error('Feishu returned invalid JSON'));
+                    return;
+                }
+                const code = result?.code ?? result?.StatusCode;
+                if (code !== 0) {
+                    reject(new Error(`Feishu rejected the message (code ${typeof code === 'number' ? code : 'missing/invalid'})`));
+                    return;
+                }
+                core.debug('Feishu accepted the message (code 0)');
+                resolve(res.statusCode);
             });
         });
-        req.on('error', e => {
-            console.error(e);
-            reject(e);
+        req.setTimeout(15000, () => {
+            req.destroy(new Error('Feishu request timed out'));
         });
+        req.on('error', () => reject(new Error('Feishu request failed or timed out')));
         req.write(content);
         req.end();
     });
@@ -44365,7 +44374,15 @@ async function run() {
         await (0, github2feishu_1.PostGithubEvent)();
     }
 }
-run();
+async function main() {
+    try {
+        await run();
+    }
+    catch (error) {
+        core.setFailed(error instanceof Error ? error.message : 'Notification failed');
+    }
+}
+main();
 
 
 /***/ }),
@@ -44708,18 +44725,13 @@ function BuildReleaseChangelogCard(params) {
             }
         }
     ];
-    const actions = compareUrl
+    const buttons = compareUrl
         ? [
             {
-                tag: 'action',
-                actions: [
-                    {
-                        tag: 'button',
-                        text: { tag: 'plain_text', content: '查看完整变更' },
-                        type: 'primary',
-                        url: compareUrl
-                    }
-                ]
+                tag: 'button',
+                text: { tag: 'plain_text', content: '查看完整变更' },
+                type: 'primary',
+                url: compareUrl
             }
         ]
         : [];
@@ -44736,7 +44748,7 @@ function BuildReleaseChangelogCard(params) {
                         width: 'weighted',
                         weight: 1,
                         vertical_align: 'center',
-                        elements: actions
+                        elements: buttons
                     },
                     {
                         tag: 'column',
@@ -44755,7 +44767,7 @@ function BuildReleaseChangelogCard(params) {
             });
         }
         else {
-            elements.push(...actions);
+            elements.push({ tag: 'action', actions: buttons });
         }
     }
     elements.push({
