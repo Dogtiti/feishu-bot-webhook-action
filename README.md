@@ -231,10 +231,11 @@ github_feishu_users: >-
 ### Skill 付款成功卡片
 
 `mode: skill-payment` 使用 `templates/skill-payment-success.v1.json`。
-`skill_payment` 为包含 `skillTitle`、`orderNo`、`amount`（如 `CNY 9.90`）、
-`paymentProvider`、`paidAt`（注明时区）、`market` 的 JSON 对象。沿用 `webhook`
-和可选 `signkey` 输入。每个变量仅替换完整的 `plain_text` 字段，不将商品名解释为
-Markdown 或 @ 提及。
+`skill_payment` 为包含 `skillTitle`、`skillUrl`（作品公开页
+URL）、`orderNo`、`amount`（如 `CNY 9.90`）、 `paymentProvider`、`paidAt`（注明
+时区）、`market` 的 JSON 对象。沿用 `webhook` 和可选 `signkey` 输入。Skill 名称
+转义后作为链接显示，点击跳转到 `skillUrl`；URL 仅接受不含凭据的 HTTP(S) 地址。其
+余字段使用 `plain_text`，商品名中的 Markdown 或 @ 提及不会作为指令解析。
 
 Shop 支付服务直接发送 webhook，不通过 GitHub Actions 中转订单数据。Shop 将此版本
 化 JSON 模板随应用发布；修改卡片时同步 Shop 的
@@ -248,7 +249,8 @@ SHA-256。模板不包含 webhook、签名密钥、买家身份或下载链接�
     webhook: ${{ secrets.SKILL_PAYMENT_FEISHU_WEBHOOK_URL }}
     signkey: ${{ secrets.SKILL_PAYMENT_FEISHU_SIGN_KEY }}
     skill_payment: >-
-      {"skillTitle":"示例 Skill","orderNo":"VM202609180000001234567890ab",
+      {"skillTitle":"示例 Skill","skillUrl":"https://viceme.cn/alice/example",
+       "orderNo":"VM202609180000001234567890ab",
        "amount":"CNY 9.90","paymentProvider":"微信支付",
        "paidAt":"2026-09-18 10:30:00（北京时间）","market":"CN"}
 ```

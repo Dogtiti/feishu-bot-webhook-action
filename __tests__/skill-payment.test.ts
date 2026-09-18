@@ -12,6 +12,7 @@ const inputs: Record<string, string> = {
   webhook: 'https://open.feishu.cn/open-apis/bot/v2/hook/test-only',
   skill_payment: JSON.stringify({
     skillTitle: '付费 Skill',
+    skillUrl: 'https://viceme.cn/alice/example',
     orderNo: 'VM123',
     amount: 'CNY 1.00',
     paymentProvider: '微信支付',

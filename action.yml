@@ -78,8 +78,8 @@ inputs:
     default: '50'
   skill_payment:
     description:
-      'JSON object with skillTitle, orderNo, amount, paymentProvider, paidAt and
-      market for skill-payment mode'
+      'JSON object with skillTitle, skillUrl, orderNo, amount, paymentProvider,
+      paidAt and market for skill-payment mode'
     required: false
 outputs:
   code:

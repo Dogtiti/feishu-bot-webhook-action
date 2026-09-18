@@ -44996,19 +44996,36 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BuildSkillPaymentCard = BuildSkillPaymentCard;
 const skill_payment_success_v1_json_1 = __importDefault(__nccwpck_require__(7562));
 function BuildSkillPaymentCard(fields) {
+    function field(name, max = 240) {
+        const value = fields[name];
+        if (typeof value !== 'string' || !value.trim() || value.length > max) {
+            throw new Error(`Invalid Skill payment card field: ${name}`);
+        }
+        return value;
+    }
+    const url = new URL(field('skillUrl', 2048));
+    if (!['https:', 'http:'].includes(url.protocol) ||
+        url.username ||
+        url.password) {
+        throw new Error('Skill link must be a public HTTP(S) URL');
+    }
+    const title = field('skillTitle')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/([\\`*_[\]~])/g, '\\$1')
+        .replace(/[\r\n]+/g, ' ');
+    const href = url.href.replace(/[()<>]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+    const skillLink = `[${title}](${href})`;
     return JSON.stringify(skill_payment_success_v1_json_1.default, (_key, value) => {
         if (typeof value !== 'string')
             return value;
         const slot = /^\{\{(\w+)\}\}$/.exec(value)?.[1];
         if (!slot)
             return value;
-        const replacement = fields[slot];
-        if (typeof replacement !== 'string' ||
-            !replacement.trim() ||
-            replacement.length > 240) {
-            throw new Error(`Invalid Skill payment card field: ${slot}`);
-        }
-        return replacement;
+        return slot === 'skillLink'
+            ? skillLink
+            : field(slot);
     });
 }
 
@@ -60260,7 +60277,7 @@ module.exports = JSON.parse('{"application/1d-interleaved-parityfec":{"source":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"msg_type":"interactive","card":{"config":{"wide_screen_mode":true,"enable_forward":false},"header":{"template":"green","title":{"tag":"plain_text","content":"ViceMe · Skill 付款成功"}},"elements":[{"tag":"div","fields":[{"is_short":false,"text":{"tag":"plain_text","content":"Skill"}},{"is_short":false,"text":{"tag":"plain_text","content":"{{skillTitle}}"}}]},{"tag":"div","fields":[{"is_short":true,"text":{"tag":"plain_text","content":"订单号"}},{"is_short":true,"text":{"tag":"plain_text","content":"{{orderNo}}"}}]},{"tag":"div","fields":[{"is_short":true,"text":{"tag":"plain_text","content":"实付金额"}},{"is_short":true,"text":{"tag":"plain_text","content":"{{amount}}"}}]},{"tag":"div","fields":[{"is_short":true,"text":{"tag":"plain_text","content":"支付方式"}},{"is_short":true,"text":{"tag":"plain_text","content":"{{paymentProvider}}"}}]},{"tag":"div","fields":[{"is_short":false,"text":{"tag":"plain_text","content":"付款时间"}},{"is_short":false,"text":{"tag":"plain_text","content":"{{paidAt}}"}}]},{"tag":"div","fields":[{"is_short":true,"text":{"tag":"plain_text","content":"市场"}},{"is_short":true,"text":{"tag":"plain_text","content":"{{market}}"}}]}]}}');
+module.exports = JSON.parse('{"msg_type":"interactive","card":{"config":{"wide_screen_mode":true,"enable_forward":false},"header":{"template":"green","title":{"tag":"plain_text","content":"ViceMe · Skill 付款成功"}},"elements":[{"tag":"div","fields":[{"is_short":false,"text":{"tag":"plain_text","content":"Skill"}},{"is_short":false,"text":{"tag":"lark_md","content":"{{skillLink}}"}}]},{"tag":"div","fields":[{"is_short":true,"text":{"tag":"plain_text","content":"订单号"}},{"is_short":true,"text":{"tag":"plain_text","content":"{{orderNo}}"}}]},{"tag":"div","fields":[{"is_short":true,"text":{"tag":"plain_text","content":"实付金额"}},{"is_short":true,"text":{"tag":"plain_text","content":"{{amount}}"}}]},{"tag":"div","fields":[{"is_short":true,"text":{"tag":"plain_text","content":"支付方式"}},{"is_short":true,"text":{"tag":"plain_text","content":"{{paymentProvider}}"}}]},{"tag":"div","fields":[{"is_short":false,"text":{"tag":"plain_text","content":"付款时间"}},{"is_short":false,"text":{"tag":"plain_text","content":"{{paidAt}}"}}]},{"tag":"div","fields":[{"is_short":true,"text":{"tag":"plain_text","content":"市场"}},{"is_short":true,"text":{"tag":"plain_text","content":"{{market}}"}}]}]}}');
 
 /***/ })
 

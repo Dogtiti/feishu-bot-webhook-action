@@ -26,8 +26,8 @@
           {
             "is_short": false,
             "text": {
-              "tag": "plain_text",
-              "content": "{{skillTitle}}"
+              "tag": "lark_md",
+              "content": "{{skillLink}}"
             }
           }
         ]
