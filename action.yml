@@ -54,6 +54,11 @@ inputs:
   tag_name:
     description: 'release tag/branch name'
     required: false
+  github_feishu_users:
+    description:
+      'JSON map of GitHub logins to {name, open_id} for independent release
+      mentions'
+    required: false
   stale_prs:
     description: 'JSON array of stale pull requests for pr-reminder mode'
     required: false

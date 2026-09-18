@@ -190,3 +190,28 @@ This makes it easier to control:
 - PR / 评论 / Review 各自展示哪些字段
 
 都会更容易。
+
+### 独立发布人提醒
+
+`release-changelog` 模式在同仓库普通分支的 PR 合入 `main` 后，在“查看完整变更”按
+钮同一行右侧显示 `@发布人 单独发布`。发布人取 PR 的 `merged_by.login`，不取 PR
+作者或重新运行工作流的人。`dev -> main`、未合并 PR、其他目标分支以及
+tag/push/manual 事件保持原来的卡片，不显示独立发布标记。
+
+调用方通过 `github_feishu_users` 传入 JSON 映射，键为 GitHub **登录名**（不是显
+示名称，大小写不敏感）：
+
+```yaml
+github_feishu_users: >-
+  {"example-login":{"name":"示例用户","open_id":"ou_0123456789abcdef0123456789abcdef"}}
+```
+
+`open_id` 用于飞书卡片的真实 `<at id=ou_...></at>` 提醒，`name` 仅用于维护映射。
+成员映射由调用仓库维护，Action 不内置组织通讯录。缺少映射时显示 GitHub 用户链接
+并记录 warning，不伪造飞书 @；无效映射或非法 open_id 会导致工作流失败。飞书客户
+端的实际提醒仍要求目标用户属于消息所在群。
+
+布局使用飞书
+[分栏组件](https://open.feishu.cn/document/common-capabilities/message-card/message-cards-content/column-set)
+和
+[Markdown 组件](https://open.feishu.cn/document/common-capabilities/message-card/message-cards-content/using-markdown-tags)。
