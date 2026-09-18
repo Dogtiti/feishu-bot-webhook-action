@@ -1,4 +1,5 @@
 type CardElement =
+  | { tag: 'markdown'; content: string; text_align: 'right' }
   | {
       tag: 'div'
       text: {
@@ -10,31 +11,25 @@ type CardElement =
       tag: 'column_set'
       flex_mode: 'none' | 'stretch' | 'bisect' | 'trisect'
       background_style: 'default' | 'grey'
-      columns: Array<{
+      columns: {
         tag: 'column'
         width: 'weighted'
         weight: number
-        vertical_align: 'top'
-        elements: Array<{
-          tag: 'div'
-          text: {
-            tag: 'lark_md'
-            content: string
-          }
-        }>
-      }>
+        vertical_align: 'top' | 'center'
+        elements: CardElement[]
+      }[]
     }
   | { tag: 'hr' }
   | {
       tag: 'note'
-      elements: Array<{
+      elements: {
         tag: 'plain_text'
         content: string
-      }>
+      }[]
     }
   | {
       tag: 'action'
-      actions: Array<{
+      actions: {
         tag: 'button'
         text: {
           tag: 'plain_text'
@@ -42,7 +37,7 @@ type CardElement =
         }
         type: 'primary' | 'default'
         url: string
-      }>
+      }[]
     }
 
 type RawCardMessage = {
@@ -74,11 +69,19 @@ export type ReleaseCardParams = {
   compareUrl: string
   commitCount: number
   actor: string
+  publisherMention?: string
 }
 
 export function BuildReleaseChangelogCard(params: ReleaseCardParams): string {
-  const { timestamp, sign, serviceName, tagName, changelog, compareUrl, commitCount } =
-    params
+  const {
+    timestamp,
+    sign,
+    serviceName,
+    tagName,
+    changelog,
+    compareUrl,
+    commitCount
+  } = params
 
   const elements: CardElement[] = [
     {
@@ -134,19 +137,55 @@ export function BuildReleaseChangelogCard(params: ReleaseCardParams): string {
     }
   ]
 
-  if (compareUrl) {
-    elements.push({ tag: 'hr' })
-    elements.push({
-      tag: 'action',
-      actions: [
+  const actions: CardElement[] = compareUrl
+    ? [
         {
-          tag: 'button',
-          text: { tag: 'plain_text', content: '查看完整变更' },
-          type: 'primary',
-          url: compareUrl
+          tag: 'action',
+          actions: [
+            {
+              tag: 'button',
+              text: { tag: 'plain_text', content: '查看完整变更' },
+              type: 'primary',
+              url: compareUrl
+            }
+          ]
         }
       ]
-    })
+    : []
+
+  if (compareUrl || params.publisherMention) {
+    elements.push({ tag: 'hr' })
+    if (params.publisherMention) {
+      elements.push({
+        tag: 'column_set',
+        flex_mode: 'none',
+        background_style: 'default',
+        columns: [
+          {
+            tag: 'column',
+            width: 'weighted',
+            weight: 1,
+            vertical_align: 'center',
+            elements: actions
+          },
+          {
+            tag: 'column',
+            width: 'weighted',
+            weight: 1,
+            vertical_align: 'center',
+            elements: [
+              {
+                tag: 'markdown',
+                content: `${params.publisherMention} 单独发布`,
+                text_align: 'right'
+              }
+            ]
+          }
+        ]
+      })
+    } else {
+      elements.push(...actions)
+    }
   }
 
   elements.push({

@@ -65,3 +65,50 @@ describe('release changelog card', () => {
     expect(actionEl).toBeUndefined()
   })
 })
+
+describe('independent release footer', () => {
+  const mention = '<at id=ou_0123456789abcdef0123456789abcdef></at>'
+  const params = {
+    timestamp: 1716283459,
+    sign: 'test-sign',
+    serviceName: 'shop',
+    tagName: 'v1.0.0',
+    changelog: '本次更新',
+    compareUrl: 'https://github.com/example/shop/compare/v0.9.0...v1.0.0',
+    commitCount: 1,
+    actor: 'Dogtiti',
+    publisherMention: mention
+  }
+
+  it('keeps the button on the left and real mention on the right in one row', () => {
+    const card = JSON.parse(BuildReleaseChangelogCard(params))
+    const row = card.card.elements.find(
+      (e: any) => e.tag === 'column_set' && e.background_style === 'default'
+    )
+    expect(row.columns[0].elements[0].actions[0].url).toBe(params.compareUrl)
+    expect(row.columns[1].elements[0]).toEqual({
+      tag: 'markdown',
+      text_align: 'right',
+      content: `${mention} 单独发布`
+    })
+    expect(row.columns.every((c: any) => c.vertical_align === 'center')).toBe(
+      true
+    )
+  })
+
+  it('retains attribution without a compare URL', () => {
+    const card = BuildReleaseChangelogCard({ ...params, compareUrl: '' })
+    expect(card).toContain(mention)
+    expect(card).not.toContain('查看完整变更')
+  })
+
+  it('preserves the original button-only footer for bulk or unknown releases', () => {
+    const card = JSON.parse(
+      BuildReleaseChangelogCard({ ...params, publisherMention: undefined })
+    )
+    expect(JSON.stringify(card)).not.toContain('单独发布')
+    expect(
+      card.card.elements.find((e: any) => e.tag === 'action').actions[0].url
+    ).toBe(params.compareUrl)
+  })
+})
