@@ -217,3 +217,13 @@ github_feishu_users: >-
 [分栏组件](https://open.feishu.cn/document/common-capabilities/message-card/message-cards-content/column-set)
 和
 [Markdown 组件](https://open.feishu.cn/document/common-capabilities/message-card/message-cards-content/using-markdown-tags)。
+
+### 通知投递失败
+
+发送器等待完整响应后，同时检查 HTTP 状态与飞书业务码。只有 HTTP 2xx 且
+`code`（或旧版 `StatusCode`）为数字 `0` 才表示投递成功；卡片拒收、无效 JSON、连
+接错误与超时都会使 Action 失败。请求设有 15 秒超时，不自动重试，避免投递结果不明
+时重复提醒。
+
+独立发布卡片分栏内直接放置 `button`，不能嵌套 `action` 容器；普通整批发布的顶层
+按钮容器保持不变。

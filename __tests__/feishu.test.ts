@@ -1,48 +1,76 @@
+import { EventEmitter } from 'events'
+import * as https from 'https'
 import { sign_with_timestamp, PostToFeishu } from '../src/feishu'
-import * as core from '@actions/core'
-import * as dotenv from 'dotenv'
 
-dotenv.config({ path: ['.env.local'] })
+jest.mock('https')
 
-const debugMock: jest.SpiedFunction<typeof core.debug> = jest
-  .spyOn(core, 'debug')
-  .mockImplementation()
+function transport(status = 200, parts = ['{"code":0}'], hang = false): any {
+  const req = new EventEmitter() as any
+  req.write = jest.fn()
+  req.setTimeout = jest.fn()
+  req.destroy = jest.fn((error: Error) => req.emit('error', error))
+  req.end = jest.fn()
+  jest.mocked(https.request).mockImplementation(((
+    _options: unknown,
+    callback: (res: any) => void
+  ) => {
+    req.end.mockImplementation(() => {
+      if (hang) return
+      const res = new EventEmitter() as any
+      res.statusCode = status
+      callback(res)
+      for (const part of parts) res.emit('data', Buffer.from(part))
+      res.emit('end')
+    })
+    return req
+  }) as typeof https.request)
+  return req
+}
 
-describe('feishu', () => {
-  it('signature', async () => {
-    const signKey = 'dGhpcyBpcyBhIGtleQ=='
-    const tm = 1716283459
-    const signature = sign_with_timestamp(tm, signKey)
-    expect(signature).toEqual('8EyY+xxfJvzWjZQpdc2mgvQFaG7lF5nbxl7RITyMkJU=')
-  })
-
-  it('fail to send txt msg with no signature', async () => {
-    const msg = `{ "msg_type":"text","content":{"text":"request example"}}`
-    const webhook = process.env.FEISHU_BOT_WEBHOOK || ''
-    const webhookId = webhook.slice(webhook.indexOf('hook/') + 5)
-    const ret = await PostToFeishu(webhookId, msg)
-    expect(ret).toEqual(200)
-    expect(debugMock).toHaveBeenNthCalledWith(1, 19021)
-    expect(debugMock).toHaveBeenNthCalledWith(
-      2,
-      'sign match fail or timestamp is not within one hour from current time'
+describe('Feishu delivery acknowledgement', () => {
+  it('preserves webhook signing', () => {
+    expect(sign_with_timestamp(1716283459, 'dGhpcyBpcyBhIGtleQ==')).toBe(
+      '8EyY+xxfJvzWjZQpdc2mgvQFaG7lF5nbxl7RITyMkJU='
     )
   })
-  /*
-  it("send txt msg ok", async () => {
-    const tm = Math.floor(Date.now() / 1000);
-    const key = process.env.FEISHU_BOT_SIGNKEY || "";
-    const webhook = process.env.FEISHU_BOT_WEBHOOK || "";
-    const webhookId = webhook.slice(webhook.indexOf("hook/") + 5);
-    const sign = sign_with_timestamp(tm, key);
-    const msg = `{
-            "timestamp": "${tm}",
-            "sign": "${sign}",
-            "msg_type":"text","content":{"text":"request example"}
-        }`;
-    console.log(msg);
-    const ret = await PostToFeishu(webhookId, msg);
-    expect(ret).toEqual(200);
-  });
-  */
+  it('accepts a chunked success response only after the complete body', async () => {
+    transport(200, ['{"co', 'de":0,"msg":"ok"}'])
+    await expect(PostToFeishu('test-only', '{}')).resolves.toBe(200)
+  })
+  it('supports the legacy success envelope', async () => {
+    transport(200, ['{"StatusCode":0,"StatusMessage":"success"}'])
+    await expect(PostToFeishu('test-only', '{}')).resolves.toBe(200)
+  })
+  it('rejects the actual 11246 card error even with HTTP 200', async () => {
+    transport(200, [
+      '{"code":11246,"msg":"ErrCode: 200410; ErrMsg: action components are not allowed in the column; "}'
+    ])
+    await expect(PostToFeishu('test-only', '{}')).rejects.toThrow('11246')
+  })
+  it.each([400, 429, 500])(
+    'rejects HTTP %s despite a success-shaped body',
+    async status => {
+      transport(status)
+      await expect(PostToFeishu('test-only', '{}')).rejects.toThrow(
+        `(${status})`
+      )
+    }
+  )
+  it.each(['{}', 'null', '[]', '{"code":"0"}', '{"code":19021}', 'not JSON'])(
+    'rejects invalid or failed acknowledgement %s',
+    async body => {
+      transport(200, [body])
+      await expect(PostToFeishu('test-only', '{}')).rejects.toThrow()
+    }
+  )
+  it('fails on timeout without retrying a potentially delivered message', async () => {
+    const req = transport(200, [], true)
+    req.setTimeout.mockImplementation((_ms: number, callback: () => void) => {
+      queueMicrotask(callback)
+    })
+    req.end = jest.fn()
+    await expect(PostToFeishu('test-only', '{}')).rejects.toThrow('timed out')
+    expect(req.setTimeout).toHaveBeenCalledWith(15000, expect.any(Function))
+    expect(https.request).toHaveBeenCalledTimes(1)
+  })
 })

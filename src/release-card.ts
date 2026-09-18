@@ -1,3 +1,15 @@
+type CardButton = {
+  tag: 'button'
+  text: { tag: 'plain_text'; content: string }
+  type: 'primary' | 'default'
+  url: string
+}
+
+// Feishu columns accept buttons directly, never an action container.
+type ColumnElement =
+  | CardButton
+  | Extract<CardElement, { tag: 'div' | 'markdown' }>
+
 type CardElement =
   | { tag: 'markdown'; content: string; text_align: 'right' }
   | {
@@ -16,7 +28,7 @@ type CardElement =
         width: 'weighted'
         weight: number
         vertical_align: 'top' | 'center'
-        elements: CardElement[]
+        elements: ColumnElement[]
       }[]
     }
   | { tag: 'hr' }
@@ -29,15 +41,7 @@ type CardElement =
     }
   | {
       tag: 'action'
-      actions: {
-        tag: 'button'
-        text: {
-          tag: 'plain_text'
-          content: string
-        }
-        type: 'primary' | 'default'
-        url: string
-      }[]
+      actions: CardButton[]
     }
 
 type RawCardMessage = {
@@ -137,18 +141,13 @@ export function BuildReleaseChangelogCard(params: ReleaseCardParams): string {
     }
   ]
 
-  const actions: CardElement[] = compareUrl
+  const buttons: CardButton[] = compareUrl
     ? [
         {
-          tag: 'action',
-          actions: [
-            {
-              tag: 'button',
-              text: { tag: 'plain_text', content: '查看完整变更' },
-              type: 'primary',
-              url: compareUrl
-            }
-          ]
+          tag: 'button',
+          text: { tag: 'plain_text', content: '查看完整变更' },
+          type: 'primary',
+          url: compareUrl
         }
       ]
     : []
@@ -166,7 +165,7 @@ export function BuildReleaseChangelogCard(params: ReleaseCardParams): string {
             width: 'weighted',
             weight: 1,
             vertical_align: 'center',
-            elements: actions
+            elements: buttons
           },
           {
             tag: 'column',
@@ -184,7 +183,7 @@ export function BuildReleaseChangelogCard(params: ReleaseCardParams): string {
         ]
       })
     } else {
-      elements.push(...actions)
+      elements.push({ tag: 'action', actions: buttons })
     }
   }
 
