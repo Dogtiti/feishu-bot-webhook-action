@@ -1,0 +1,132 @@
+{
+  "msg_type": "interactive",
+  "card": {
+    "config": {
+      "wide_screen_mode": true,
+      "enable_forward": false
+    },
+    "header": {
+      "template": "green",
+      "title": {
+        "tag": "plain_text",
+        "content": "ViceMe · Skill 付款成功"
+      }
+    },
+    "elements": [
+      {
+        "tag": "div",
+        "fields": [
+          {
+            "is_short": false,
+            "text": {
+              "tag": "plain_text",
+              "content": "Skill"
+            }
+          },
+          {
+            "is_short": false,
+            "text": {
+              "tag": "plain_text",
+              "content": "{{skillTitle}}"
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "fields": [
+          {
+            "is_short": true,
+            "text": {
+              "tag": "plain_text",
+              "content": "订单号"
+            }
+          },
+          {
+            "is_short": true,
+            "text": {
+              "tag": "plain_text",
+              "content": "{{orderNo}}"
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "fields": [
+          {
+            "is_short": true,
+            "text": {
+              "tag": "plain_text",
+              "content": "实付金额"
+            }
+          },
+          {
+            "is_short": true,
+            "text": {
+              "tag": "plain_text",
+              "content": "{{amount}}"
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "fields": [
+          {
+            "is_short": true,
+            "text": {
+              "tag": "plain_text",
+              "content": "支付方式"
+            }
+          },
+          {
+            "is_short": true,
+            "text": {
+              "tag": "plain_text",
+              "content": "{{paymentProvider}}"
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "fields": [
+          {
+            "is_short": false,
+            "text": {
+              "tag": "plain_text",
+              "content": "付款时间"
+            }
+          },
+          {
+            "is_short": false,
+            "text": {
+              "tag": "plain_text",
+              "content": "{{paidAt}}"
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "fields": [
+          {
+            "is_short": true,
+            "text": {
+              "tag": "plain_text",
+              "content": "市场"
+            }
+          },
+          {
+            "is_short": true,
+            "text": {
+              "tag": "plain_text",
+              "content": "{{market}}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

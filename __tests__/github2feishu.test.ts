@@ -3,14 +3,13 @@ import { expect } from '@jest/globals'
 import * as core from '@actions/core'
 import { context } from '@actions/github'
 import * as main from '../src/github2feishu'
-import * as dotenv from 'dotenv'
+import * as feishu from '../src/feishu'
 
-dotenv.config({ path: ['.env.local'] })
+jest.spyOn(feishu, 'PostToFeishu').mockResolvedValue(200)
 
 const runMock = jest.spyOn(main, 'PostGithubEvent')
 
 // Mock the GitHub Actions core library
-let debugMock: jest.SpiedFunction<typeof core.debug>
 let errorMock: jest.SpiedFunction<typeof core.error>
 // let setFailedMock: jest.SpiedFunction<typeof core.setFailed>
 // let setOutputMock: jest.SpiedFunction<typeof core.setOutput>
@@ -20,7 +19,7 @@ describe('events and actions', () => {
     jest.clearAllMocks()
     // Set the action's inputs as return values from core.getInput()
 
-    debugMock = jest.spyOn(core, 'debug').mockImplementation()
+    jest.spyOn(core, 'debug').mockImplementation()
     errorMock = jest.spyOn(core, 'error').mockImplementation()
   })
 
@@ -229,8 +228,7 @@ describe('events and actions', () => {
     const resp = await main.PostGithubEvent()
     expect(runMock).toHaveReturned()
     expect(resp).toEqual(200)
-    expect(debugMock).toHaveBeenNthCalledWith(1, 0)
-    expect(debugMock).toHaveBeenNthCalledWith(2, 'success')
+    expect(feishu.PostToFeishu).toHaveBeenCalledTimes(1)
 
     expect(errorMock).not.toHaveBeenCalled()
   })
@@ -1444,8 +1442,7 @@ describe('events and actions', () => {
     const resp = await main.PostGithubEvent()
     expect(runMock).toHaveReturned()
     expect(resp).toEqual(200)
-    expect(debugMock).toHaveBeenNthCalledWith(1, 0)
-    expect(debugMock).toHaveBeenNthCalledWith(2, 'success')
+    expect(feishu.PostToFeishu).toHaveBeenCalledTimes(1)
 
     expect(errorMock).not.toHaveBeenCalled()
   })
@@ -1749,8 +1746,7 @@ describe('events and actions', () => {
     const resp = await main.PostGithubEvent()
     expect(runMock).toHaveReturned()
     expect(resp).toEqual(200)
-    expect(debugMock).toHaveBeenNthCalledWith(1, 0)
-    expect(debugMock).toHaveBeenNthCalledWith(2, 'success')
+    expect(feishu.PostToFeishu).toHaveBeenCalledTimes(1)
 
     expect(errorMock).not.toHaveBeenCalled()
   })

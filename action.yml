@@ -19,7 +19,7 @@ inputs:
     description:
       'action mode: "event" (default) for GitHub event notifications,
       "release-changelog" for AI-generated release notes, "pr-reminder" for
-      stale PR reminders'
+      stale PR reminders, "skill-payment" for paid Skill order cards'
     required: false
     default: 'event'
   ai_api_key:
@@ -76,6 +76,11 @@ inputs:
     description: 'maximum pull requests shown in pr-reminder mode'
     required: false
     default: '50'
+  skill_payment:
+    description:
+      'JSON object with skillTitle, orderNo, amount, paymentProvider, paidAt and
+      market for skill-payment mode'
+    required: false
 outputs:
   code:
     description: 'code from response'
