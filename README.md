@@ -194,9 +194,11 @@ This makes it easier to control:
 ### 独立发布人提醒
 
 `release-changelog` 模式在同仓库普通分支的 PR 合入 `main` 后，在“查看完整变更”按
-钮同一行右侧显示 `@发布人 单独发布`。发布人取 PR 的 `merged_by.login`，不取 PR
-作者或重新运行工作流的人。`dev -> main`、未合并 PR、其他目标分支以及
-tag/push/manual 事件保持原来的卡片，不显示独立发布标记。
+钮同一行右侧显示 `@发布人 单独发布`。发布人取面向 `main` 的 PR 作者
+`user.login`，不取审批人、合并人或重新运行工作流的人。Git 不记录分支创建者，因此
+以开发者自己创建发布 PR 为归属约定；代他人创建 PR 时需注意作者归
+属。`dev -> main`、未合并 PR、其他目标分支以及 tag/push/manual 事件保持原来的卡
+片，不显示独立发布标记。
 
 调用方通过 `github_feishu_users` 传入 JSON 映射，键为 GitHub **登录名**（不是显
 示名称，大小写不敏感）：

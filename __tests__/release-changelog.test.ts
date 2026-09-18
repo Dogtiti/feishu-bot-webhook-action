@@ -42,7 +42,8 @@ it.each(['feat/example', 'dev'])(
         merged: true,
         base: { ref: 'main' },
         head: { ref: source, repo: { full_name: 'example/shop' } },
-        merged_by: { login: 'Dogtiti' }
+        user: { login: 'Dogtiti' },
+        merged_by: { login: 'reviewer' }
       }
     }
     expect(await PostReleaseChangelog()).toBe(200)

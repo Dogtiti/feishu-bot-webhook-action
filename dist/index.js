@@ -44932,10 +44932,10 @@ function resolveReleasePublisher() {
         pr.head.repo.full_name !== github_1.context.payload.repository?.full_name) {
         return undefined;
     }
-    const login = pr.merged_by?.login;
+    const login = pr.user?.login;
     if (typeof login !== 'string' ||
         !/^[a-z0-9][a-z0-9-]*(?:\[bot\])?$/i.test(login)) {
-        core.warning('Independent release has no valid merged_by login; publisher omitted');
+        core.warning('Independent release has no valid PR author login; publisher omitted');
         return undefined;
     }
     const raw = core.getInput('github_feishu_users');
