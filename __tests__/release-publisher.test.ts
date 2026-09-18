@@ -23,8 +23,8 @@ beforeEach(() => {
       merged: true,
       base: { ref: 'main' },
       head: { ref: 'feat/example', repo: { full_name: 'example/shop' } },
-      user: { login: 'author' },
-      merged_by: { login: 'Dogtiti' }
+      user: { login: 'Dogtiti' },
+      merged_by: { login: 'reviewer' }
     }
   }
   jest
@@ -35,7 +35,7 @@ beforeEach(() => {
 })
 
 describe('independent release publisher', () => {
-  it('mentions the actual merger, not the author or rerun actor', () => {
+  it('mentions the PR author, not the reviewer/merger or rerun actor', () => {
     expect(resolveReleasePublisher()).toBe(`<at id=${openId}></at>`)
     expect(core.getInput).toHaveBeenCalledWith('github_feishu_users')
   })
@@ -107,9 +107,8 @@ describe('independent release publisher', () => {
     expect(() => resolveReleasePublisher()).toThrow('duplicate GitHub logins')
   })
 
-  it('does not fall back to the rerun actor when merged_by is missing', () => {
-    if (context.payload.pull_request)
-      delete context.payload.pull_request.merged_by
+  it('does not fall back to the merger or rerun actor when the author is missing', () => {
+    if (context.payload.pull_request) delete context.payload.pull_request.user
     expect(resolveReleasePublisher()).toBeUndefined()
   })
 })

@@ -19,14 +19,14 @@ export function resolveReleasePublisher(): string | undefined {
     return undefined
   }
 
-  // merged_by is stable across reruns; context.actor may be a workflow operator.
-  const login: unknown = pr.merged_by?.login
+  // Attribute the feature to its PR author, not the reviewer/merger or rerun operator.
+  const login: unknown = pr.user?.login
   if (
     typeof login !== 'string' ||
     !/^[a-z0-9][a-z0-9-]*(?:\[bot\])?$/i.test(login)
   ) {
     core.warning(
-      'Independent release has no valid merged_by login; publisher omitted'
+      'Independent release has no valid PR author login; publisher omitted'
     )
     return undefined
   }
