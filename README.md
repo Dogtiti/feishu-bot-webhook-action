@@ -227,3 +227,12 @@ github_feishu_users: >-
 
 独立发布卡片分栏内直接放置 `button`，不能嵌套 `action` 容器；普通整批发布的顶层
 按钮容器保持不变。
+
+### Push-triggered release attribution
+
+For `release-changelog` on a main push, pass `release_pull_request` as JSON
+resolved from the GitHub API for the triggering merge commit. The action
+requires a merged same-repository PR into main with a matching
+`merge_commit_sha`. It uses the PR author and `github_feishu_users` for the
+mention; dev bulk releases and manual recovery omit it. Existing pull_request
+callers need no changes.

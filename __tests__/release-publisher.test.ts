@@ -62,6 +62,7 @@ describe('independent release publisher', () => {
     'omits non-PR event %s',
     event => {
       context.eventName = event
+      jest.mocked(core.getInput).mockReturnValue('')
       expect(resolveReleasePublisher()).toBeUndefined()
     }
   )
@@ -109,6 +110,50 @@ describe('independent release publisher', () => {
 
   it('does not fall back to the merger or rerun actor when the author is missing', () => {
     if (context.payload.pull_request) delete context.payload.pull_request.user
+    expect(resolveReleasePublisher()).toBeUndefined()
+  })
+})
+
+describe('main push release context', () => {
+  function setup(): {
+    merge_commit_sha: string
+    head: { ref: string; repo: { full_name: string } }
+    base: { ref: string; repo: { full_name: string } }
+  } {
+    const pr = {
+      ...context.payload.pull_request,
+      head: { ref: 'feat/example', repo: { full_name: 'example/shop' } },
+      merge_commit_sha: 'a'.repeat(40),
+      base: { ref: 'main', repo: { full_name: 'example/shop' } }
+    }
+    context.eventName = 'push'
+    context.sha = 'a'.repeat(40)
+    context.payload.ref = 'refs/heads/main'
+    jest
+      .mocked(core.getInput)
+      .mockImplementation(name =>
+        name === 'release_pull_request'
+          ? JSON.stringify(pr)
+          : JSON.stringify({ Dogtiti: { open_id: openId } })
+      )
+    return pr
+  }
+  it('uses the verified merged PR author on push', () => {
+    setup()
+    expect(resolveReleasePublisher()).toBe(`<at id=${openId}></at>`)
+  })
+  it('rejects metadata from another merge', () => {
+    setup().merge_commit_sha = 'b'.repeat(40)
+    expect(() => resolveReleasePublisher()).toThrow('must match this main push')
+  })
+  it('omits dev bulk releases', () => {
+    const pr = setup()
+    if (pr.head) pr.head.ref = 'dev'
+    expect(resolveReleasePublisher()).toBeUndefined()
+  })
+  it('ignores provided metadata on recovery', () => {
+    setup()
+    context.eventName = 'workflow_dispatch'
     expect(resolveReleasePublisher()).toBeUndefined()
   })
 })
