@@ -54,6 +54,11 @@ inputs:
   tag_name:
     description: 'release tag/branch name'
     required: false
+  release_pull_request:
+    description:
+      'Verified merged PR JSON for a main push; merge_commit_sha must match this
+      workflow SHA. Ignored for recovery dispatch.'
+    required: false
   github_feishu_users:
     description:
       'JSON map of GitHub logins to {name, open_id} for independent release

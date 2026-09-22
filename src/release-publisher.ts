@@ -4,10 +4,26 @@ import { context } from '@actions/github'
 // Only a merged, same-repository feature PR into main is an independent release.
 // Do not infer this from a tag, actor, commit message, or a workflow rerun.
 export function resolveReleasePublisher(): string | undefined {
-  const pr = context.payload.pull_request
+  let pr = context.payload.pull_request
+  let closed =
+    context.eventName === 'pull_request' && context.payload.action === 'closed'
+  if (context.eventName === 'push') {
+    const raw = core.getInput('release_pull_request')
+    if (!raw) return undefined
+    const resolved = JSON.parse(raw) as typeof pr
+    if (
+      !resolved ||
+      context.payload.ref !== 'refs/heads/main' ||
+      !context.sha ||
+      resolved.merge_commit_sha !== context.sha ||
+      resolved.base?.repo?.full_name !== context.payload.repository?.full_name
+    )
+      throw new Error('release_pull_request must match this main push')
+    pr = resolved
+    closed = true
+  }
   if (
-    context.eventName !== 'pull_request' ||
-    context.payload.action !== 'closed' ||
+    !closed ||
     pr?.merged !== true ||
     pr.base?.ref !== 'main' ||
     typeof pr.head?.ref !== 'string' ||

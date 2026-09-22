@@ -44932,9 +44932,23 @@ exports.resolveReleasePublisher = resolveReleasePublisher;
 const core = __importStar(__nccwpck_require__(2186));
 const github_1 = __nccwpck_require__(5438);
 function resolveReleasePublisher() {
-    const pr = github_1.context.payload.pull_request;
-    if (github_1.context.eventName !== 'pull_request' ||
-        github_1.context.payload.action !== 'closed' ||
+    let pr = github_1.context.payload.pull_request;
+    let closed = github_1.context.eventName === 'pull_request' && github_1.context.payload.action === 'closed';
+    if (github_1.context.eventName === 'push') {
+        const raw = core.getInput('release_pull_request');
+        if (!raw)
+            return undefined;
+        const resolved = JSON.parse(raw);
+        if (!resolved ||
+            github_1.context.payload.ref !== 'refs/heads/main' ||
+            !github_1.context.sha ||
+            resolved.merge_commit_sha !== github_1.context.sha ||
+            resolved.base?.repo?.full_name !== github_1.context.payload.repository?.full_name)
+            throw new Error('release_pull_request must match this main push');
+        pr = resolved;
+        closed = true;
+    }
+    if (!closed ||
         pr?.merged !== true ||
         pr.base?.ref !== 'main' ||
         typeof pr.head?.ref !== 'string' ||
